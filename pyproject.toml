@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blackbox-desk"
+version = "0.3.4"
+description = "Gestione locale dei log Blackbox Betaflight via USB Mass Storage"
+requires-python = ">=3.10"
+dependencies = ["PySide6-Essentials==6.11.2", "pyserial==3.5"]
+
+[project.scripts]
+blackbox-desk = "blackboxdesk.app:main"
+
+[tool.setuptools.packages.find]
+include = ["blackboxdesk*"]
