@@ -95,10 +95,11 @@ class LocalLogFilterModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         index = source.index(row, 0, parent)
+        path = Path(source.filePath(index))
         name = source.fileName(index)
         if sys.platform == "win32" and (name.startswith(".") or source.fileInfo(index).isHidden()):
             return False
-        return source.isDir(index) or Path(name).suffix.casefold() in {".bbl", ".bfl"}
+        return source.isDir(index) or path.is_dir() or Path(name).suffix.casefold() in {".bbl", ".bfl"}
 
     def lessThan(self, left, right):
         source = self.sourceModel()
