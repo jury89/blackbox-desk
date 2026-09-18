@@ -1,6 +1,7 @@
 """Native file lists and internal drag, exclusively from the flight controller to the computer."""
 
 from pathlib import Path
+import sys
 
 from PySide6.QtCore import QCollator, QDir, QItemSelectionModel, QSortFilterProxyModel, Qt, Signal
 from PySide6.QtGui import QColor, QDrag, QIcon, QPainter, QPen, QPixmap
@@ -94,7 +95,10 @@ class LocalLogFilterModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         index = source.index(row, 0, parent)
-        return source.isDir(index) or Path(source.fileName(index)).suffix.casefold() in {".bbl", ".bfl"}
+        name = source.fileName(index)
+        if sys.platform == "win32" and (name.startswith(".") or source.fileInfo(index).isHidden()):
+            return False
+        return source.isDir(index) or Path(name).suffix.casefold() in {".bbl", ".bfl"}
 
     def lessThan(self, left, right):
         source = self.sourceModel()

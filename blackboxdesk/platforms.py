@@ -8,6 +8,9 @@ import subprocess
 import sys
 import time
 
+import ctypes
+from ctypes import wintypes
+
 from .models import AppError, Volume, check_cancel
 
 
@@ -108,6 +111,68 @@ def powershell(script):
     return run(["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], timeout=30)
 
 
+def windows_disk_device_id(disk_id):
+    if not re.fullmatch(r"\d+", str(disk_id)):
+        raise AppError("Invalid USB disk.")
+    script = (
+        "$ErrorActionPreference='Stop'; "
+        f"$disk=Get-CimInstance Win32_DiskDrive -Filter 'Index = {disk_id}'; "
+        "if ($null -eq $disk -or $disk.InterfaceType -ne 'USB' -or "
+        "[string]::IsNullOrWhiteSpace($disk.PNPDeviceID)) { throw 'Validated USB disk not found' }; "
+        "[string]$disk.PNPDeviceID"
+    )
+    device_id = powershell(script).decode("utf-8-sig", errors="replace").strip()
+    if not device_id:
+        raise AppError("Validated USB disk not found.")
+    return device_id
+
+
+def windows_configuration_manager():
+    config = ctypes.WinDLL("cfgmgr32", use_last_error=True)
+    config.CM_Locate_DevNodeW.argtypes = [ctypes.POINTER(wintypes.ULONG), wintypes.LPCWSTR, wintypes.ULONG]
+    config.CM_Locate_DevNodeW.restype = wintypes.ULONG
+    config.CM_Get_Parent.argtypes = [ctypes.POINTER(wintypes.ULONG), wintypes.ULONG, wintypes.ULONG]
+    config.CM_Get_Parent.restype = wintypes.ULONG
+    config.CM_Get_Device_IDW.argtypes = [wintypes.ULONG, wintypes.LPWSTR, wintypes.ULONG, wintypes.ULONG]
+    config.CM_Get_Device_IDW.restype = wintypes.ULONG
+    config.CM_Request_Device_EjectW.argtypes = [wintypes.ULONG, ctypes.POINTER(wintypes.ULONG), wintypes.LPWSTR,
+                                                 wintypes.ULONG, wintypes.ULONG]
+    config.CM_Request_Device_EjectW.restype = wintypes.ULONG
+    return config
+
+
+def windows_usb_parent_device_id(device_id):
+    config = windows_configuration_manager()
+    node = wintypes.ULONG()
+    status = config.CM_Locate_DevNodeW(ctypes.byref(node), device_id, 0)
+    if status:
+        raise AppError("Windows could not locate the validated USB device for safe removal.")
+    parent = wintypes.ULONG()
+    status = config.CM_Get_Parent(ctypes.byref(parent), node, 0)
+    if status:
+        raise AppError("Windows could not locate the physical USB device for safe removal.")
+    parent_id = ctypes.create_unicode_buffer(260)
+    status = config.CM_Get_Device_IDW(parent, parent_id, len(parent_id), 0)
+    if status or not re.fullmatch(r"USB\\VID_[0-9A-F]{4}&PID_[0-9A-F]{4}(?:&[^\\]+)*\\[^\\]+", parent_id.value, re.IGNORECASE):
+        raise AppError("Windows did not identify a removable USB device for safe removal.")
+    return parent_id.value
+
+
+def request_windows_device_eject(device_id):
+    config = windows_configuration_manager()
+    node = wintypes.ULONG()
+    status = config.CM_Locate_DevNodeW(ctypes.byref(node), device_id, 0)
+    if status:
+        raise AppError("Windows could not locate the validated USB device for safe removal.")
+    veto_type = wintypes.ULONG()
+    veto_name = ctypes.create_unicode_buffer(260)
+    status = config.CM_Request_Device_EjectW(node, ctypes.byref(veto_type), veto_name, len(veto_name), 0)
+    if status:
+        detail = veto_name.value.strip()
+        suffix = f" ({detail})" if detail else ""
+        raise AppError(f"Windows refused safe removal of the flight controller{suffix}. Close files using it and try again.")
+
+
 class WindowsVolumes:
     def list(self):
         try:
@@ -133,14 +198,12 @@ class WindowsVolumes:
     def eject(self, volume, cancel=None):
         check_cancel(cancel)
         self.validate(volume)
-        drive = str(volume.root)[:2]
-        if not re.fullmatch(r"[A-Za-z]:", drive):
-            raise AppError("Invalid USB drive.")
-        powershell(f"$ErrorActionPreference='Stop'; $shell=New-Object -ComObject Shell.Application; "
-                   f"$item=$shell.Namespace(17).ParseName('{drive}'); "
-                   "if ($null -eq $item) { throw 'USB storage not found' }; $item.InvokeVerb('Eject')")
+        check_cancel(cancel)
+        disk_device = windows_disk_device_id(volume.disk_id)
+        request_windows_device_eject(windows_usb_parent_device_id(disk_device))
         deadline = time.monotonic() + 15
         while volume.root.exists() and time.monotonic() < deadline:
+            check_cancel(cancel)
             time.sleep(0.25)
         if volume.root.exists():
             raise AppError("Windows did not eject storage. Close open files and use Safely Remove Hardware.")

@@ -3,6 +3,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import json
 from pathlib import Path
+import sys
 import tempfile
 import time
 import unittest
@@ -96,6 +97,17 @@ class BrowserDragTests(unittest.TestCase):
         self.assertEqual(Path(browser.model.filePath(browser.view.rootIndex())), self.target)
         self.assertEqual(browser.count.text(), "2 folders · 4 Blackbox logs")
         self.assertTrue(browser.filesystem.isReadOnly())
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows hidden entries")
+    def test_local_browser_hides_dot_files_and_folders(self):
+        (self.target / ".private").mkdir()
+        (self.target / ".hidden.bfl").write_bytes(b"flight")
+        (self.target / "Voli").mkdir()
+        (self.target / "shown.bfl").write_bytes(b"flight")
+        browser = self.window.browser
+        browser.refresh()
+        self.wait_for(lambda: self.visible_names() == ["Voli", "shown.bfl"])
+        self.assertEqual(browser.count.text(), "1 folder · 1 Blackbox log")
 
     def test_folders_stay_first_for_each_sort_column_and_direction(self):
         for name in ("Z folder", "A folder"):

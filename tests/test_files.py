@@ -154,7 +154,7 @@ class FileTests(unittest.TestCase):
         finally:
             os.chflags(result.path, 0)
 
-    @unittest.skipUnless(hasattr(stat, "UF_HIDDEN"), "macOS hidden flag")
+    @unittest.skipUnless(hasattr(os, "chflags") and hasattr(stat, "UF_HIDDEN"), "macOS hidden flag")
     def test_existing_hidden_copy_is_made_visible_when_reused(self):
         entry = self.entry()
         result = files.copy_log(self.fc, entry, self.output)
@@ -165,7 +165,7 @@ class FileTests(unittest.TestCase):
         self.assertEqual(repeat.path.read_bytes(), entry.path.read_bytes())
         self.assertEqual(list(self.output.iterdir()), [result.path])
 
-    @unittest.skipUnless(hasattr(stat, "UF_HIDDEN"), "macOS hidden flag")
+    @unittest.skipUnless(hasattr(os, "chflags") and hasattr(stat, "UF_HIDDEN"), "macOS hidden flag")
     def test_new_copy_visible_after_temporary_file_cleanup(self):
         entry = self.entry()
         original_unlink = Path.unlink

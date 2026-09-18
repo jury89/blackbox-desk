@@ -70,6 +70,14 @@ QToolTip { background: #172B46; color: white; padding: 6px; }
 """
 
 
+WINDOWS_MODAL_STYLE = """
+QMessageBox { background: #FFFFFF; color: #172B46; }
+QMessageBox QLabel { background: #FFFFFF; color: #172B46; }
+QMessageBox QTextEdit { background: #FFFFFF; color: #172B46; }
+QMessageBox QPushButton { color: #172B46; }
+"""
+
+
 def app_icon(size=128):
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.GlobalColor.transparent)
@@ -167,7 +175,7 @@ class Window(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.resize(1220, 780)
         self.setMinimumSize(1040, 670)
-        self.setStyleSheet(STYLE)
+        self.setStyleSheet(STYLE + (WINDOWS_MODAL_STYLE if sys.platform == "win32" else ""))
         self.build_ui()
         self.update_actions()
 

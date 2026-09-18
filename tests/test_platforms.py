@@ -113,3 +113,21 @@ class WindowsContractTests(unittest.TestCase):
             with self.assertRaises(AppError):
                 adapter.eject(volume)
             ps.assert_not_called()
+
+    def test_eject_requests_native_removal_for_validated_usb_parent(self):
+        volume = Volume(Path("E:\\"), "FC", "3", "abc", False)
+        adapter = WindowsVolumes()
+        with mock.patch.object(adapter, "validate", return_value=volume), \
+                mock.patch.object(platforms, "windows_disk_device_id", return_value="USBSTOR\\DISK\\FC"), \
+                mock.patch.object(platforms, "windows_usb_parent_device_id", return_value="USB\\VID_0483&PID_572A\\FC"), \
+                mock.patch.object(platforms, "request_windows_device_eject") as eject, \
+                mock.patch.object(Path, "exists", return_value=False):
+            adapter.eject(volume)
+        eject.assert_called_once_with("USB\\VID_0483&PID_572A\\FC")
+
+    def test_invalid_disk_is_never_queried_for_eject(self):
+        volume = Volume(Path("E:\\"), "FC", "not-a-disk", "abc", False)
+        with mock.patch.object(platforms, "powershell") as ps:
+            with self.assertRaisesRegex(AppError, "Invalid USB disk"):
+                platforms.windows_disk_device_id(volume.disk_id)
+            ps.assert_not_called()

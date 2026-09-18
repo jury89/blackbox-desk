@@ -2,6 +2,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from pathlib import Path
+import sys
 import tempfile
 import threading
 import time
@@ -169,6 +170,10 @@ class UITests(unittest.TestCase):
         self.wait_job()
         self.assertIsNotNone(self.window.session)
         self.assertEqual(self.window.table.item(0, 3).text(), "Copied")
+
+    def test_modal_style_is_applied_only_on_windows(self):
+        self.assertEqual("QMessageBox { background: #FFFFFF; color: #172B46; }" in self.window.styleSheet(),
+                         sys.platform == "win32")
 
 
 if __name__ == "__main__":

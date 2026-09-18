@@ -31,7 +31,7 @@ On macOS, **Eject flight controller** safely unmounts all volumes on the validat
 
 To use the flight controller again, physically disconnect and reconnect USB, then press **Search** and **Connect**. The app does not keep a persistent blacklist, change macOS automount settings, or run a monitoring process. The disk can still appear in Disk Utility as a physical device with no mounted volume.
 
-Windows uses its native removal path and requires physical validation on Windows hardware.
+Windows requests safe removal through the native Plug and Play API for the physical USB parent of the validated disk; it never forces removal. If Windows refuses, close programs using the flight controller and try again. Physical validation on Windows hardware is still required.
 
 ## Managing local files
 
