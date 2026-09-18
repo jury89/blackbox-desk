@@ -1,4 +1,4 @@
-"""Operazioni sui log; nessun comando di configurazione o cancellazione flash."""
+"""Log operations; no configuration command or flash erasure."""
 
 import datetime
 import hashlib
@@ -50,7 +50,7 @@ def recorded_date(path, offset=0):
 
 def make_entry(path, number, offset=0, size=None, extracted=False, *, read_dates=True, info=None):
     info = info or path.stat()
-    name = f"VOLO_{number:05d}.BBL" if extracted else path.name
+    name = f"FLIGHT_{number:05d}.BBL" if extracted else path.name
     return LogEntry(name, path, number, info.st_size - offset if size is None else size,
                     info.st_size, info.st_mtime_ns, offset, recorded_date(path, offset) if read_dates else "", extracted)
 
@@ -78,7 +78,7 @@ def split_flash(path, progress, cancel, *, read_dates=True):
             tail = data[-(len(HEADER) - 1):]
             progress("Leggo l'indice dei voli nella flash…", int(position * 100 / max(size, 1)))
     if not offsets:
-        raise AppError("Il file complessivo della flash non contiene log riconoscibili.")
+        raise AppError("The complete flash file contains no recognizable logs.")
     return [make_entry(path, n + 1, start, (offsets[n + 1] if n + 1 < len(offsets) else size) - start, True, read_dates=read_dates)
             for n, start in enumerate(offsets)]
 
@@ -86,7 +86,7 @@ def split_flash(path, progress, cancel, *, read_dates=True):
 def scan_logs(root, hint="", progress=lambda *_: None, cancel=None, *, read_dates=True):
     sd, flash, combined = [], [], None
     folders = log_dirs(root)
-    progress("Leggo l'elenco dei log nella memoria USB…", -1)
+    progress("Reading the log list from USB storage…", -1)
     for folder in folders:
         with os.scandir(folder) as listing:
             candidates = list(listing)
@@ -108,18 +108,18 @@ def scan_logs(root, hint="", progress=lambda *_: None, cancel=None, *, read_date
             else:
                 combined = path
     if sd and (flash or combined):
-        raise AppError("Il disco contiene due organizzazioni Blackbox diverse. Seleziona una memoria senza ambiguità.")
+        raise AppError("The disk contains two different Blackbox layouts. Select unambiguous storage.")
     if sd:
         if hint == "FLASH":
-            raise AppError("I file del disco non corrispondono alla memoria indicata dalla FC.")
+            raise AppError("Disk files do not match the storage reported by the flight controller.")
         storage, logs = "SDCARD", sd
     elif flash or combined:
         if hint == "SDCARD":
-            raise AppError("I file del disco non corrispondono alla memoria indicata dalla FC.")
+            raise AppError("Disk files do not match the storage reported by the flight controller.")
         storage = "FLASH"
         if not flash or max(entry.number for entry in flash) >= 100:
             if combined is None:
-                raise AppError("La flash espone 100 log ma manca il file complessivo necessario a trovare gli altri.")
+                raise AppError("Flash exposes 100 logs, but the complete file needed to find the others is missing.")
             logs = split_flash(combined, progress, cancel, read_dates=read_dates)
         else:
             logs = flash
@@ -133,23 +133,23 @@ def validate_entry(root, entry):
     try:
         relative = entry.path.relative_to(root)
     except ValueError as error:
-        raise AppError("Il log selezionato non appartiene alla memoria collegata.") from error
+        raise AppError("The selected log does not belong to connected storage.") from error
     cursor = root
     for part in relative.parts:
         cursor /= part
         if cursor.is_symlink():
-            raise AppError("Un collegamento simbolico non può essere usato come log della FC.")
+            raise AppError("A symbolic link cannot be used as a flight controller log.")
     if len(relative.parts) > 2 or (len(relative.parts) == 2 and relative.parts[0].casefold() != "logs"):
-        raise AppError("Il log non si trova nella cartella Blackbox prevista.")
+        raise AppError("The log is not in the expected Blackbox folder.")
     info = entry.path.stat()
     if not stat.S_ISREG(info.st_mode) or (info.st_size, info.st_mtime_ns) != (entry.source_size, entry.source_mtime):
-        raise AppError(f"{entry.name} è cambiato. Aggiorna l'elenco prima di procedere.")
+        raise AppError(f"{entry.name} changed. Refresh the list before continuing.")
     if entry.offset < 0 or entry.size < len(HEADER) or entry.offset + entry.size > info.st_size:
-        raise AppError(f"{entry.name} è vuoto o incompleto.")
+        raise AppError(f"{entry.name} is empty or incomplete.")
     with entry.path.open("rb") as handle:
         handle.seek(entry.offset)
         if handle.read(len(HEADER)) != HEADER:
-            raise AppError(f"{entry.name} non ha un'intestazione Blackbox valida.")
+            raise AppError(f"{entry.name} has no valid Blackbox header.")
 
 
 def digest_file(path, cancel=None):
@@ -162,10 +162,10 @@ def digest_file(path, cancel=None):
 
 
 def unlock_copy(path):
-    """Rende il file locale scrivibile e visibile nel Finder senza alterare i dati."""
+    """Make the local file writable and visible in Finder without changing its data."""
     info = path.lstat()
     if not stat.S_ISREG(info.st_mode):
-        raise AppError("La copia locale non è un file regolare.")
+        raise AppError("The local copy is not a regular file.")
     locks = sum(getattr(stat, name, 0) for name in ("UF_IMMUTABLE", "SF_IMMUTABLE", "UF_APPEND", "SF_APPEND"))
     hidden = getattr(stat, "UF_HIDDEN", 0)
     flags = getattr(info, "st_flags", 0)
@@ -177,9 +177,9 @@ def unlock_copy(path):
     else:
         os.chmod(path, mode, follow_symlinks=False)
     if getattr(path.stat(), "st_flags", 0) & locks:
-        raise AppError(f"La copia {path.name} risulta ancora bloccata.")
+        raise AppError(f"The copy {path.name} is still locked.")
     if getattr(path.stat(), "st_flags", 0) & hidden:
-        raise AppError(f"La copia {path.name} risulta ancora nascosta nel Finder.")
+        raise AppError(f"The copy {path.name} is still hidden in Finder.")
     fd = os.open(path, os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0))
     os.close(fd)
 
@@ -187,7 +187,7 @@ def unlock_copy(path):
 def publish_copy(stage, name, checksum, cancel=None):
     original = Path(name)
     if original.name != name or original.suffix.upper() not in (".BFL", ".BBL"):
-        raise AppError("Nome del log non valido.")
+        raise AppError("Invalid log name.")
     family = re.compile(re.escape(original.stem) + r"(?:_([2-9]|[1-9][0-9]+))?" + re.escape(original.suffix), re.I)
     candidates = [p for p in stage.parent.iterdir() if family.fullmatch(p.name)]
     for existing in candidates:
@@ -216,7 +216,7 @@ def publish_copy(stage, name, checksum, cancel=None):
 def copy_log(root, entry, destination, progress=lambda *_: None, cancel=None):
     root, destination = root.resolve(), destination.expanduser().resolve()
     if destination == root or root in destination.parents:
-        raise AppError("Scegli una cartella sul computer, fuori dalla memoria del drone.")
+        raise AppError("Choose a folder on your computer, outside drone storage.")
     validate_entry(root, entry)
     destination.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".blackbox-", suffix=".partial", dir=destination)
@@ -229,7 +229,7 @@ def copy_log(root, entry, destination, progress=lambda *_: None, cancel=None):
                 check_cancel(cancel)
                 block = source.read(min(BLOCK, remaining))
                 if not block:
-                    raise AppError(f"Copia interrotta di {entry.name}.")
+                    raise AppError(f"Copy of {entry.name} was interrupted.")
                 output.write(block)
                 digest.update(block)
                 remaining -= len(block)
@@ -238,27 +238,27 @@ def copy_log(root, entry, destination, progress=lambda *_: None, cancel=None):
             os.fsync(output.fileno())
         validate_entry(root, entry)
         if stage.stat().st_size != entry.size or digest_file(stage, cancel) != digest.hexdigest():
-            raise AppError(f"La verifica della copia di {entry.name} non è riuscita.")
+            raise AppError(f"Verification of the copy of {entry.name} failed.")
         target, reused = publish_copy(stage, entry.name, digest.hexdigest(), cancel)
     finally:
         stage.unlink(missing_ok=True)
     # Il nome temporaneo nascosto e il nome finale condividono l'inode.
-    # Normalizzare dopo la rimozione del temporaneo evita che il file finale
-    # mantenga UF_HIDDEN, anche quando si riutilizza una copia già presente.
+    # Normalizing after removing the temporary file prevents the final file
+    # from keeping UF_HIDDEN, even when reusing an existing copy.
     unlock_copy(target)
     return CopyResult(entry, target, reused)
 
 
 def delete_logs(session, entries, confirmed=False, progress=lambda *_: None, cancel=None):
     if not confirmed:
-        raise AppError("Conferma la cancellazione dei log selezionati.")
+        raise AppError("Confirm deletion of the selected logs.")
     if not session.can_delete:
-        raise AppError("Questa memoria non permette di eliminare singoli log via USB.")
+        raise AppError("This storage does not allow individual log deletion through USB.")
     if not entries or len({entry.path for entry in entries}) != len(entries):
-        raise AppError("Selezione dei log non valida.")
+        raise AppError("Invalid log selection.")
     for entry in entries:
         if entry.extracted or entry.offset != 0 or not SD_NAME.fullmatch(entry.path.name):
-            raise AppError("Si possono eliminare solo file SDCARD individuali.")
+            raise AppError("Only individual SDCARD files can be deleted.")
         validate_entry(session.volume.root, entry)
     deleted = []
     for entry in entries:
@@ -267,17 +267,17 @@ def delete_logs(session, entries, confirmed=False, progress=lambda *_: None, can
             validate_entry(session.volume.root, entry)
             entry.path.unlink()
             deleted.append(entry.name)
-            progress(f"Eliminato {entry.name}", int(len(deleted) * 100 / len(entries)))
+            progress(f"Deleted {entry.name}", int(len(deleted) * 100 / len(entries)))
         except (OSError, AppError) as error:
             error_type = Cancelled if isinstance(error, Cancelled) else AppError
-            raise error_type(f"Eliminati {len(deleted)} di {len(entries)} log. {error} Aggiorna l'elenco.") from error
+            raise error_type(f"Deleted {len(deleted)} of {len(entries)} logs. {error} Refresh the list.") from error
     return deleted
 
 
 def sd_reset_entries(session):
     """Snapshot dei soli log SDCARD: include file vuoti/incompleti, mai symlink."""
     if not session.can_delete:
-        raise AppError("Lo svuotamento diretto richiede una memoria SDCARD scrivibile.")
+        raise AppError("Direct emptying requires writable SDCARD storage.")
     entries = []
     for folder in log_dirs(session.volume.root):
         for path in folder.iterdir():
@@ -285,39 +285,39 @@ def sd_reset_entries(session):
                 continue
             info = path.lstat()
             if not stat.S_ISREG(info.st_mode):
-                raise AppError("Un elemento nell'elenco dei log non è un file regolare. Svuotamento bloccato.")
+                raise AppError("An item in the log list is not a regular file. Emptying blocked.")
             entries.append((path, info.st_size, info.st_mtime_ns))
     return tuple(sorted(entries))
 
 
 def reset_sd_logs(plan, confirmed=False, progress=lambda *_: None, cancel=None, validate_volume=lambda: None):
     if not confirmed:
-        raise AppError("Conferma lo svuotamento di tutti i log della memoria.")
+        raise AppError("Confirm emptying all logs from storage.")
     validate_volume()
     if sd_reset_entries(plan.session) != plan.entries:
-        raise AppError("L'elenco dei log è cambiato dopo la conferma. Rileggilo prima di svuotare la memoria.")
+        raise AppError("The log list changed after confirmation. Refresh it before emptying storage.")
     deleted = 0
     for path, size, modified in plan.entries:
         try:
             check_cancel(cancel)
             validate_volume()
-            # Riconvalida anche le cartelle: un collegamento simbolico non può
-            # cambiare il destinatario fra conferma e cancellazione.
+            # Revalidate folders too: a symbolic link cannot change the
+            # destination between confirmation and deletion.
             root = plan.session.volume.root.resolve()
             relative = path.relative_to(root)
             if len(relative.parts) not in (1, 2) or (len(relative.parts) == 2 and relative.parts[0].casefold() != "logs"):
-                raise AppError("Percorso del log non valido.")
+                raise AppError("Invalid log path.")
             if path.parent.is_symlink() or path.is_symlink():
-                raise AppError("Il percorso dei log è stato sostituito.")
+                raise AppError("The log path was replaced.")
             info = path.lstat()
             if not stat.S_ISREG(info.st_mode) or (info.st_size, info.st_mtime_ns) != (size, modified):
-                raise AppError("Un log è cambiato durante lo svuotamento.")
+                raise AppError("A log changed while emptying storage.")
             path.unlink()
             deleted += 1
-            progress(f"Svuoto la memoria: eliminati {deleted} di {len(plan.entries)} log…", int(100 * deleted / len(plan.entries)))
+            progress(f"Emptying storage: deleted {deleted} of {len(plan.entries)} logs…", int(100 * deleted / len(plan.entries)))
         except (OSError, ValueError, AppError) as error:
-            raise AppError(f"Svuotamento parziale: eliminati {deleted} di {len(plan.entries)} log. Aggiorna l'elenco. {error}") from error
+            raise AppError(f"Partial emptying: deleted {deleted} of {len(plan.entries)} logs. Refresh the list. {error}") from error
     validate_volume()
     if sd_reset_entries(plan.session):
-        raise AppError("Sono comparsi altri log durante lo svuotamento. Aggiorna l'elenco.")
+        raise AppError("Other logs appeared while emptying storage. Refresh the list.")
     return deleted

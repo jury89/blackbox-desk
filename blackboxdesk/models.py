@@ -80,4 +80,4 @@ class SDResetPlan:
 
 def check_cancel(cancel):
     if cancel is not None and cancel.is_set():
-        raise Cancelled("Operazione annullata.")
+        raise Cancelled("Operation cancelled.")

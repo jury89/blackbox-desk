@@ -9,7 +9,7 @@ import unittest
 from unittest import mock
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 
 from blackboxdesk.app import Window
 from blackboxdesk.backend import Backend, DemoBackend, DemoVolumes
@@ -45,7 +45,7 @@ class BackendTests(unittest.TestCase):
 
     def test_failed_copy_never_ejects(self):
         with mock.patch.object(files, "copy_log", side_effect=AppError("copy failed")), mock.patch.object(self.demo.volumes, "eject") as eject:
-            with self.assertRaisesRegex(AppError, "Completati 0"):
+            with self.assertRaisesRegex(AppError, "Completed 0"):
                 self.demo.copy(self.session, self.session.logs[:1], self.output)
         eject.assert_not_called()
 
@@ -86,13 +86,13 @@ class BackendTests(unittest.TestCase):
     def test_two_new_volumes_are_rejected(self):
         other = Volume(self.output, "USB estranea", "other", "other", False)
         backend, _ = self.serial_backend([[], [self.session.volume, other]])
-        with self.assertRaisesRegex(AppError, "più memorie"):
+        with self.assertRaisesRegex(AppError, "Multiple USB storage"):
             backend.connect(Device("test", "FC", port="/test/serial"))
 
     def test_unrelated_new_volume_is_rejected(self):
         other = Volume(self.output, "USB estranea", "other", "other", False)
         backend, _ = self.serial_backend([[], [other]])
-        with self.assertRaisesRegex(AppError, "non è riconoscibile"):
+        with self.assertRaisesRegex(AppError, "cannot be identified"):
             backend.connect(Device("test", "FC", port="/test/serial"))
 
     def test_cancel_after_partial_copy_reports_retained_files(self):
@@ -103,7 +103,7 @@ class BackendTests(unittest.TestCase):
             cancel.set()
             return result
         with mock.patch.object(files, "copy_log", side_effect=copy_then_cancel), mock.patch.object(self.demo.volumes, "eject") as eject:
-            with self.assertRaisesRegex(Cancelled, "Completati 1 di 2"):
+            with self.assertRaisesRegex(Cancelled, "Completed 1 of 2"):
                 self.demo.copy(self.session, self.session.logs[:2], self.output, cancel=cancel)
         self.assertEqual(len(list(self.output.glob("*.BFL"))), 1)
         eject.assert_not_called()
@@ -125,6 +125,8 @@ class UITests(unittest.TestCase):
         self.window.pool.waitForDone(10000)
         self.application.processEvents()
         self.window.close()
+        self.window.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.temp.cleanup()
 
     def wait_job(self):
@@ -159,14 +161,14 @@ class UITests(unittest.TestCase):
         self.wait_job()
         self.assertIsNone(self.window.session)
         self.assertTrue((Path(self.temp.name) / "LOG00016.BFL").exists())
-        self.assertIn("Memoria espulsa", self.window.status.text())
+        self.assertIn("Storage ejected", self.window.status.text())
 
     def test_copy_keep_mounted_updates_row(self):
         self.window.auto_eject.setChecked(False)
         self.window.copy_latest()
         self.wait_job()
         self.assertIsNotNone(self.window.session)
-        self.assertEqual(self.window.table.item(0, 3).text(), "Copiato")
+        self.assertEqual(self.window.table.item(0, 3).text(), "Copied")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import time
 import unittest
 from unittest import mock
 
-from PySide6.QtCore import QItemSelectionModel, QPoint, Qt, QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QItemSelectionModel, QPoint, Qt, QTimer
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -119,7 +119,7 @@ class LocalFilesTests(unittest.TestCase):
         with mock.patch.object(local_files, "QFile") as file:
             file.return_value.moveToTrash.return_value = False
             file.return_value.errorString.return_value = "Access denied"
-            with self.assertRaisesRegex(AppError, "non è stato eliminato definitivamente"):
+            with self.assertRaisesRegex(AppError, "not permanently deleted"):
                 local_files.move_to_trash(path)
             file.assert_called_once_with(str(path))
             file.return_value.remove.assert_not_called()
@@ -131,12 +131,12 @@ class LocalFilesTests(unittest.TestCase):
         b.touch()
         plan = local_files.plan_trash(self.root, [a, b])
         with mock.patch.object(local_files, "move_to_trash", side_effect=[None, AppError("locked")]):
-            with self.assertRaisesRegex(AppError, "1 di 2"):
+            with self.assertRaisesRegex(AppError, "1 of 2"):
                 local_files.trash_items(plan, confirmed=True)
         cancel = threading.Event()
         cancel.set()
         with mock.patch.object(local_files, "move_to_trash") as move:
-            with self.assertRaisesRegex(Cancelled, "0 elementi"):
+            with self.assertRaisesRegex(Cancelled, "0 items"):
                 local_files.trash_items(plan, confirmed=True, cancel=cancel)
         move.assert_not_called()
 
@@ -169,6 +169,8 @@ class LocalActionsUITests(unittest.TestCase):
         self.window.pool.waitForDone(10000)
         self.application.processEvents()
         self.window.close()
+        self.window.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     def wait_for(self, predicate):
         until = time.monotonic() + 5
@@ -228,8 +230,8 @@ class LocalActionsUITests(unittest.TestCase):
         with mock.patch.object(local_files, "move_to_trash") as move:
             self.browser.trash_button.click()
         move.assert_not_called()
-        self.assertEqual(observed[0][0], "Annulla")
-        self.assertIn("TUTTO il contenuto", observed[0][1])
+        self.assertEqual(observed[0][0], "Cancel")
+        self.assertIn("ALL their contents", observed[0][1])
         self.assertIn(str(self.root), observed[0][2])
 
     def test_confirmed_local_trash_updates_list_without_changing_fc(self):
@@ -243,10 +245,11 @@ class LocalActionsUITests(unittest.TestCase):
             self.browser.trash_button.click()
             self.wait_for(lambda: not self.window.busy)
         self.assertFalse(path.exists())
+        self.browser.refresh()
         self.wait_for(lambda: self.browser.model.rowCount(self.browser.view.rootIndex()) == 2)
         self.assertFalse(self.browser.trash_button.isEnabled())
         self.assertEqual(len(self.window.session.logs), 6)
-        self.assertIn("Spostati nel Cestino: 1.", self.window.status.text())
+        self.assertIn("Moved to Trash: 1.", self.window.status.text())
 
     def test_navigation_clears_local_selection_and_busy_blocks_mutations(self):
         self.click_row(0)

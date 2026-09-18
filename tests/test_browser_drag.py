@@ -8,7 +8,7 @@ import time
 import unittest
 from unittest import mock
 
-from PySide6.QtCore import QItemSelectionModel, QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtCore import QCoreApplication, QEvent, QItemSelectionModel, QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtWidgets import QApplication
 
 from blackboxdesk.app import LOG_MIME, Window
@@ -51,6 +51,8 @@ class BrowserDragTests(unittest.TestCase):
         self.window.pool.waitForDone(10000)
         self.application.processEvents()
         self.window.close()
+        self.window.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.temp.cleanup()
 
     def wait_for(self, predicate):
@@ -89,9 +91,10 @@ class BrowserDragTests(unittest.TestCase):
             (self.target / name).write_bytes(b"flight")
         browser = self.window.browser
         expected = ["Voli", "Z cartella.bbl", "a.BFL", "b.BbL", "c.bfl", "flight.bbl"]
+        browser.refresh()
         self.wait_for(lambda: self.visible_names() == expected)
         self.assertEqual(Path(browser.model.filePath(browser.view.rootIndex())), self.target)
-        self.assertEqual(browser.count.text(), "2 cartelle · 4 log Blackbox")
+        self.assertEqual(browser.count.text(), "2 folders · 4 Blackbox logs")
         self.assertTrue(browser.filesystem.isReadOnly())
 
     def test_folders_stay_first_for_each_sort_column_and_direction(self):
@@ -101,6 +104,7 @@ class BrowserDragTests(unittest.TestCase):
             path = self.target / name
             path.write_bytes(b"x" * size)
             os.utime(path, (timestamp, timestamp))
+        self.window.browser.refresh()
         self.wait_for(lambda: len(self.visible_names()) == 4)
         browser = self.window.browser
         for column, ascending_logs in ((0, ["a.bbl", "b.bfl"]), (1, ["b.bfl", "a.bbl"]), (3, ["a.bbl", "b.bfl"])):
@@ -120,16 +124,19 @@ class BrowserDragTests(unittest.TestCase):
         other = self.target / "notes.txt"
         other.write_text("notes")
         browser = self.window.browser
+        browser.refresh()
         self.wait_for(lambda: browser.filesystem.index(str(other)).isValid())
         self.assertEqual(self.visible_names(), [])
-        self.assertEqual(browser.count.text(), "0 cartelle · 0 log Blackbox")
+        self.assertEqual(browser.count.text(), "0 folders · 0 Blackbox logs")
         log = self.target / "new.BFL"
         other.rename(log)
+        browser.refresh()
         self.wait_for(lambda: self.visible_names() == ["new.BFL"])
-        self.assertEqual(browser.count.text(), "0 cartelle · 1 log Blackbox")
+        self.assertEqual(browser.count.text(), "0 folders · 1 Blackbox log")
         log.rename(other)
+        browser.refresh()
         self.wait_for(lambda: self.visible_names() == [])
-        self.assertEqual(browser.count.text(), "0 cartelle · 0 log Blackbox")
+        self.assertEqual(browser.count.text(), "0 folders · 0 Blackbox logs")
 
     def test_double_click_folder_back_up_and_typed_path_change_destination(self):
         child = self.target / "Voli"
@@ -161,6 +168,7 @@ class BrowserDragTests(unittest.TestCase):
         for entry in entries:
             self.assertEqual((self.target / entry.name).read_bytes(), entry.path.read_bytes())
         self.assertEqual(len(self.session.logs), 6)
+        self.window.browser.refresh()
         self.wait_for(lambda: len(self.visible_names()) == 3)
 
     def test_drop_on_subfolder_copies_inside_that_folder(self):

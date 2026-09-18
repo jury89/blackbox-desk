@@ -69,7 +69,7 @@ class FileTests(unittest.TestCase):
         self.assertEqual(entries[0].number, 110)
         result = files.copy_log(self.fc, entries[0], self.output)
         self.assertEqual(result.path.read_bytes(), parts[-1])
-        self.assertEqual(result.path.name, "VOLO_00110.BBL")
+        self.assertEqual(result.path.name, "FLIGHT_00110.BBL")
 
     def test_combined_header_crosses_read_boundary(self):
         combined = self.fc / "BTFL_ALL.BBL"
@@ -101,17 +101,17 @@ class FileTests(unittest.TestCase):
     def test_changed_source_refused(self):
         entry = self.entry()
         entry.path.write_bytes(files.HEADER + b"changed")
-        with self.assertRaisesRegex(AppError, "cambiato"):
+        with self.assertRaisesRegex(AppError, "changed"):
             files.copy_log(self.fc, entry, self.output)
 
     def test_invalid_header_refused(self):
         path = self.log()
         path.write_bytes(b"X" * 100)
-        with self.assertRaisesRegex(AppError, "intestazione"):
+        with self.assertRaisesRegex(AppError, "header"):
             files.copy_log(self.fc, files.make_entry(path, 16), self.output)
 
     def test_destination_inside_fc_refused(self):
-        with self.assertRaisesRegex(AppError, "fuori"):
+        with self.assertRaisesRegex(AppError, "outside"):
             files.copy_log(self.fc, self.entry(), self.fc / "copy")
 
     def test_cancelled_copy_leaves_no_partial(self):

@@ -1,4 +1,4 @@
-"""MSP v1: identificazione, ingresso MSC ed erase Blackbox con conferma."""
+"""MSP v1: identification, MSC entry, and confirmed Blackbox erasure."""
 
 from dataclasses import dataclass
 import struct
@@ -61,13 +61,13 @@ class MSP:
             if sys.platform == "darwin":
                 busy = subprocess.run(["/usr/sbin/lsof", "-t", self.port], capture_output=True, timeout=5)
                 if busy.stdout.strip():
-                    raise AppError("La FC è già in uso. Premi Disconnect nell'app Betaflight e riprova.")
+                    raise AppError("The flight controller is already in use. Press Disconnect in the Betaflight app and try again.")
             kwargs = {} if sys.platform == "win32" else {"exclusive": True}
             self.connection = serial.Serial(self.port, 115200, timeout=0.15, write_timeout=2, **kwargs)
             self.connection.reset_input_buffer()
             return self
         except serial.SerialException as error:
-            raise AppError("Non riesco ad aprire la FC. Disconnettila dall'app Betaflight e riprova.") from error
+            raise AppError("Cannot open the flight controller. Disconnect it from the Betaflight app and try again.") from error
 
     def __exit__(self, *_):
         if self.connection:
@@ -76,11 +76,11 @@ class MSP:
     def request(self, command, payload=b"", timeout=3):
         erase_allowed = command == FLASH_ERASE and self._erase_authorized and payload == b""
         if (command not in ALLOWED and not erase_allowed) or (command == REBOOT and payload != b"\x02"):
-            raise AppError("Comando non consentito: l'app non cambia la configurazione della FC.")
+            raise AppError("Command not allowed: the app does not change flight controller configuration.")
         check_cancel(self.cancel)
         frame = packet(command, payload)
         if self.connection.write(frame) != len(frame):
-            raise AppError("Invio USB incompleto.")
+            raise AppError("Incomplete USB send.")
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             check_cancel(self.cancel)
@@ -90,75 +90,75 @@ class MSP:
                 if received != command:
                     continue
                 if rejected:
-                    message = "Il firmware non supporta la modalità disco USB richiesta." if command == REBOOT else "La FC non supporta un comando di lettura necessario."
+                    message = "Firmware does not support the required USB Mass Storage mode." if command == REBOOT else "The flight controller does not support a required read command."
                     raise AppError(message)
                 return body
-            # Attendi il primo byte, poi consuma soltanto quelli già disponibili:
+            # Wait for the first byte, then consume only bytes already available:
             # read(1024) aspetterebbe il timeout anche per risposte MSP brevissime.
             self.buffer.extend(self.connection.read(max(1, min(1024, self.connection.in_waiting))))
-        raise TimeoutError("La FC non risponde. Chiudi la connessione in Betaflight e riprova.")
+        raise TimeoutError("The flight controller is not responding. Close its connection in Betaflight and try again.")
 
     def identify(self):
         api = self.request(API)
         if len(api) < 3 or api[1] != 1 or api[2] < 44:
-            raise AppError("Serve Betaflight con protocollo MSP 1.44 o successivo (Betaflight 4.3+).")
+            raise AppError("Betaflight with MSP protocol 1.44 or later is required (Betaflight 4.3+).")
         if self.request(VARIANT) != b"BTFL":
-            raise AppError("Il dispositivo selezionato non usa Betaflight.")
+            raise AppError("The selected device does not use Betaflight.")
         version, board = self.request(VERSION), self.request(BOARD)
         names, offset = [], 8
         for _ in range(3):
             if offset >= len(board) or offset + 1 + board[offset] > len(board):
-                raise AppError("Identificazione della FC incompleta.")
+                raise AppError("Incomplete flight controller identification.")
             size = board[offset]
             offset += 1
             names.append(board[offset:offset + size].decode("ascii", errors="replace"))
             offset += size
         if len(version) < 3:
-            raise AppError("Versione firmware incompleta.")
+            raise AppError("Incomplete firmware version.")
         self.ensure_disarmed()
         blackbox = self.request(BLACKBOX)
         if len(blackbox) < 2 or not blackbox[0] or blackbox[1] not in (1, 2):
-            raise AppError("La FC non segnala una Blackbox su FLASH o SDCARD.")
+            raise AppError("The flight controller does not report Blackbox on FLASH or SDCARD.")
         firmware = ".".join(str(n) for n in version[:3])
         return Identity(names[1] or names[0] or "Betaflight", firmware, "FLASH" if blackbox[1] == 1 else "SDCARD")
 
     def ensure_disarmed(self):
         status = self.request(STATUS)
         if len(status) < 10 or struct.unpack_from("<I", status, 6)[0] & 1:
-            raise AppError("Disarma il drone prima di accedere ai log.")
+            raise AppError("Disarm the drone before accessing logs.")
 
     def uid(self):
         value = self.request(UID)
         if len(value) != 12 or not any(value):
-            raise AppError("Non riesco a verificare l'identità univoca della FC. Svuotamento bloccato.")
+            raise AppError("Cannot verify the flight controller unique identity. Emptying blocked.")
         return value.hex().upper()
 
     def flash_summary(self):
         data = self.request(FLASH_SUMMARY)
         if len(data) < 13:
-            raise AppError("Stato della memoria FLASH incompleto.")
+            raise AppError("Incomplete FLASH storage status.")
         flags, sectors, capacity, used = struct.unpack_from("<BIII", data)
         if not flags & 2 or not sectors or not capacity or used > capacity:
-            raise AppError("La FC non segnala una memoria FLASH Blackbox valida.")
+            raise AppError("The flight controller does not report valid Blackbox FLASH storage.")
         return {"ready": bool(flags & 1), "capacity": capacity, "used": used}
 
     def erase_flash(self, uid, capacity, confirmed=False, progress=lambda *_: None, timeout=600):
         if not confirmed:
-            raise AppError("Conferma lo svuotamento completo della memoria Blackbox.")
+            raise AppError("Confirm complete emptying of Blackbox storage.")
         if self.identify().storage != "FLASH":
-            raise AppError("Il comando di cancellazione FLASH non è adatto a questa memoria.")
+            raise AppError("The FLASH erase command is not valid for this storage.")
         if self.uid() != uid:
-            raise AppError("La FC è cambiata dopo la conferma. Nessun comando di cancellazione inviato.")
+            raise AppError("The flight controller changed after confirmation. No erase command was sent.")
         before = self.flash_summary()
         if before["capacity"] != capacity or not before["ready"]:
-            raise AppError("La memoria è cambiata o è occupata. Rileggi lo stato prima di svuotarla.")
+            raise AppError("Storage changed or is busy. Refresh its status before emptying it.")
         self.ensure_disarmed()
         check_cancel(self.cancel)
-        # Dopo l'invio non esiste un comando per annullare un erase hardware.
-        # L'eventuale richiesta di annullamento non deve troncare il monitoraggio.
+        # After sending it, no command can cancel a hardware erase.
+        # A cancellation request must not stop monitoring.
         previous_cancel, self.cancel = self.cancel, None
         try:
-            progress("Svuoto la memoria FLASH. Mantieni la FC collegata…", -1)
+            progress("Emptying FLASH storage. Keep the flight controller connected…", -1)
             self._erase_authorized = True
             try:
                 self.request(FLASH_ERASE, timeout=5)
@@ -168,15 +168,15 @@ class MSP:
             while time.monotonic() < deadline:
                 state = self.flash_summary()
                 if state["capacity"] != capacity:
-                    raise AppError("La capacità della memoria è cambiata durante la verifica.")
+                    raise AppError("Storage capacity changed during verification.")
                 if state["ready"] and state["used"] == 0:
-                    progress("Memoria FLASH vuota: spazio Blackbox interamente disponibile.", 100)
+                    progress("FLASH storage empty: all Blackbox space is available.", 100)
                     return state
-                progress("Cancellazione FLASH in corso. Attendo la conferma dalla FC…", -1)
+                progress("FLASH erasure in progress. Waiting for flight controller confirmation…", -1)
                 time.sleep(0.5)
-            raise TimeoutError("La FC non ha confermato il termine entro 10 minuti.")
+            raise TimeoutError("The flight controller did not confirm completion within 10 minutes.")
         except Exception as error:
-            raise AppError("Svuotamento non verificato. La cancellazione potrebbe essere ancora in corso: mantieni la FC alimentata e verifica lo stato prima di riprovare. " + str(error)) from error
+            raise AppError("Emptying was not verified. Erasure may still be in progress: keep the flight controller powered and check its status before trying again. " + str(error)) from error
         finally:
             self._erase_authorized = False
             self.cancel = previous_cancel
@@ -187,4 +187,4 @@ class MSP:
         except (serial.SerialException, OSError, TimeoutError):
             return  # La comparsa di un nuovo volume è comunque obbligatoria.
         if response != b"\x02\x01":
-            raise AppError("La memoria Blackbox non è pronta per la modalità disco USB.")
+            raise AppError("Blackbox storage is not ready for USB Mass Storage mode.")

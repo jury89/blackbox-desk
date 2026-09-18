@@ -18,7 +18,7 @@ def run(args, timeout=15):
     result = subprocess.run(args, **options)
     if result.returncode:
         message = result.stderr.decode("utf-8", errors="replace").strip()
-        raise AppError(message or "Il sistema operativo non ha completato l'operazione sul disco.")
+        raise AppError(message or "The operating system did not complete the disk operation.")
     return result.stdout
 
 
@@ -27,9 +27,9 @@ class MacVolumes:
         try:
             result = plistlib.loads(run(["/usr/sbin/diskutil", "info", "-plist", str(target)]))
         except (ValueError, plistlib.InvalidFileException) as error:
-            raise AppError("Informazioni del disco USB non leggibili.") from error
+            raise AppError("USB disk information cannot be read.") from error
         if not isinstance(result, dict):
-            raise AppError("Informazioni del disco USB non valide.")
+            raise AppError("Invalid USB disk information.")
         return result
 
     def from_info(self, info):
@@ -58,13 +58,13 @@ class MacVolumes:
                     if volume:
                         volumes.append(volume)
                 except AppError:
-                    continue  # Partizione non montata o disco appena scollegato.
+                    continue  # Unmounted partition or a disk just disconnected.
         return volumes
 
     def validate(self, volume):
         current = self.from_info(self.info(volume.root))
         if current is None or (current.root, current.disk_id, current.identity) != (volume.root, volume.disk_id, volume.identity):
-            raise AppError("La memoria è stata scollegata o sostituita. Riconnetti la FC.")
+            raise AppError("Storage was disconnected or replaced. Reconnect the flight controller.")
         return current
 
     def eject(self, volume, cancel=None):
@@ -78,7 +78,7 @@ class MacVolumes:
         check_cancel(cancel)
         run(["/usr/sbin/diskutil", "unmountDisk", volume.disk_id], timeout=30)
         if volume.root.is_mount():
-            raise AppError("La memoria risulta ancora montata. Chiudi i file e i programmi che la usano, poi riprova Espelli FC.")
+            raise AppError("Storage is still mounted. Close files and programs using it, then try Eject flight controller again.")
 
 
 WINDOWS_VOLUMES = r"""
@@ -113,7 +113,7 @@ class WindowsVolumes:
         try:
             data = json.loads(powershell(WINDOWS_VOLUMES).decode("utf-8-sig"))
         except (UnicodeError, ValueError) as error:
-            raise AppError("Windows non ha restituito l'elenco delle memorie USB.") from error
+            raise AppError("Windows did not return the USB storage list.") from error
         if isinstance(data, dict):
             data = [data]
         volumes = []
@@ -128,22 +128,22 @@ class WindowsVolumes:
         for current in self.list():
             if (current.root, current.disk_id, current.identity) == (volume.root, volume.disk_id, volume.identity):
                 return current
-        raise AppError("La memoria è stata scollegata o sostituita. Riconnetti la FC.")
+        raise AppError("Storage was disconnected or replaced. Reconnect the flight controller.")
 
     def eject(self, volume, cancel=None):
         check_cancel(cancel)
         self.validate(volume)
         drive = str(volume.root)[:2]
         if not re.fullmatch(r"[A-Za-z]:", drive):
-            raise AppError("Unità USB non valida.")
+            raise AppError("Invalid USB drive.")
         powershell(f"$ErrorActionPreference='Stop'; $shell=New-Object -ComObject Shell.Application; "
                    f"$item=$shell.Namespace(17).ParseName('{drive}'); "
-                   "if ($null -eq $item) { throw 'Memoria USB non trovata' }; $item.InvokeVerb('Eject')")
+                   "if ($null -eq $item) { throw 'USB storage not found' }; $item.InvokeVerb('Eject')")
         deadline = time.monotonic() + 15
         while volume.root.exists() and time.monotonic() < deadline:
             time.sleep(0.25)
         if volume.root.exists():
-            raise AppError("Windows non ha espulso la memoria. Chiudi i file aperti e usa Rimozione sicura hardware.")
+            raise AppError("Windows did not eject storage. Close open files and use Safely Remove Hardware.")
 
 
 def platform_volumes():
@@ -151,4 +151,4 @@ def platform_volumes():
         return MacVolumes()
     if sys.platform == "win32":
         return WindowsVolumes()
-    raise AppError("Questa versione supporta macOS e Windows.")
+    raise AppError("This version supports macOS and Windows.")

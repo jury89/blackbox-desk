@@ -1,89 +1,73 @@
-# Betaflight Blackbox Desk 0.3.4
+# Betaflight Blackbox Desk
 
-Applicazione desktop per vedere, copiare e gestire i log Blackbox delle flight controller **Betaflight** con **USB Mass Storage**. Interfaccia in italiano. Funziona interamente in locale, senza account o servizi in background.
+An offline desktop app for viewing, copying, and managing Blackbox logs from **Betaflight** flight controllers through **USB Mass Storage**. It runs locally on macOS and Windows, with no account, cloud upload, or background service.
 
-Due pannelli affiancati: **FC a sinistra, computer a destra**. Puoi navigare nella cartella locale e trascinare uno o più log dalla FC al computer. Nel pannello Computer le cartelle restano in cima, seguite soltanto dai log Blackbox. L'elenco della FC compare prima delle date, completate in background. La versione 0.3.4 corregge il rimontaggio immediato dopo l'espulsione su Mac. Rimangono gestione locale, copia verificata, sblocco delle copie, cancellazione dalla FC e svuotamento della memoria.
+The app has two side-by-side panes: the flight controller on the left and a browsable local folder on the right. Drag one or more logs from the flight controller to the computer, or use the copy controls.
 
-## Stato di questa prima versione
+## Status
 
-- **Mac Intel:** applicazione `.app` autonoma; non richiede Python o Terminale per l'uso.
-- **Windows x64:** stesso codice dell'interfaccia e della gestione file; adattatori Windows inclusi. Build `.exe` e prova fisica da eseguire su Windows. Non è una versione Windows già collaudata.
-- **FC:** riconoscimento Betaflight generico, nessuna lista che limita il produttore. Richiede protocollo MSP 1.44+ (Betaflight 4.3+) e modalità disco USB funzionante. Il motore di trasferimento precedente è stato provato sulla SpeedyBee F7 V3 / 2026.6.1; l'app nuova e altre schede richiedono prove con hardware collegato.
+- **Intel Mac:** a standalone `.app` can be built locally and does not require Python or Terminal to run.
+- **Windows x64:** the same interface and file-management code are supported. The Windows executable must be built and physically tested on Windows.
+- **Flight controllers:** generic Betaflight recognition, with no manufacturer allowlist. Requires MSP 1.44+ (Betaflight 4.3+) and working USB Mass Storage mode.
+- The transfer engine has been tested previously on a SpeedyBee F7 V3 with Betaflight 2026.6.1. Other boards and the current UI still require hardware validation.
 
-## Uso
+## Use
 
-1. Avvia **Betaflight Blackbox Desk**. Collega una FC disarmata con un cavo USB dati e chiudi la sua connessione nel Configurator.
-2. Premi **Cerca**, scegli il dispositivo e **Connetti**. La FC viene riconosciuta, poi riavviata in modalità memoria USB. Se è già un disco USB, puoi selezionarlo direttamente.
-3. Il pannello sinistro mostra subito nomi e dimensioni, dal numero di log più alto. L'ultimo è selezionato. Le date inizialmente mostrate con `…` vengono lette in background: puoi già copiare o espellere. Usa clic, Maiusc e Cmd/Ctrl per selezionarne più di uno, oppure Tutti/Nessuno. La data compare soltanto se presente nell'intestazione del log; non viene dedotta dal filesystem.
-4. Nel pannello **Computer** scegli la cartella di destinazione. Puoi entrare nelle sottocartelle con doppio clic, usare Indietro/Su o scrivere un percorso e premere Invio. Le cartelle sono sempre in cima, seguite solo dai file `.bbl` e `.bfl`, anche con estensione maiuscola o mista. Il contenuto si aggiorna automaticamente.
-5. Trascina i log selezionati nel pannello Computer, oppure direttamente sopra una sua sottocartella. Sono disponibili anche **Copia ultimo** e **Copia selezionati**. Vengono conservati il nome originale e i dati; un conflitto diverso produce `_2`, `_3`, ecc. Copie identiche sono riutilizzate. Ogni copia è verificata con SHA-256, sbloccata e resa visibile e scrivibile.
-6. **Espelli FC dopo la copia** è attivo per impostazione iniziale e vale anche per il trascinamento. Disattivalo se vuoi continuare a gestire i file; usa poi **Espelli FC**. L'espulsione riuscita viene confermata. Se fallisce, i log già copiati restano sul computer e l'app segnala il problema.
-7. Per eliminare log, selezionali e premi **Elimina selezionati**. Una finestra elenca i file e richiede conferma; l'azione è definitiva.
+1. Start **Betaflight Blackbox Desk**. Connect a disarmed flight controller with a data-capable USB cable and close its connection in Betaflight Configurator.
+2. Press **Search**, choose the device, and press **Connect**. The app identifies the flight controller and restarts it into USB Mass Storage mode. You can also select storage already mounted as a USB disk.
+3. The left pane lists names and sizes immediately, ordered by the highest log number first. Dates initially displayed as `…` are read in the background; copying and ejection remain available while that happens.
+4. Choose a destination in the **Computer** pane. Open subfolders by double-clicking, use Back or Up, or enter a path and press Return. Folders are shown first, followed only by `.bbl` and `.bfl` Blackbox logs.
+5. Drag selected logs to the computer pane or onto a displayed subfolder. **Copy latest** and **Copy selected** are also available. Original names and contents are retained. Different name collisions become `_2`, `_3`, and so on; identical existing copies are reused. Every copy is verified with SHA-256, unlocked, and made visible and writable.
+6. **Eject flight controller after copying** is enabled by default and also applies to drag-and-drop. Disable it to continue managing files, then use **Eject flight controller** when ready.
+7. To delete individual logs, select them and press **Delete selected**. The confirmation dialog lists the files and requires confirmation. The deletion is permanent.
 
-Non vengono cancellati log automaticamente dopo la copia. Non vengono modificati PID, impostazioni di volo o firmware.
+The app never deletes logs automatically after copying, and it does not change PID settings, flight settings, or firmware configuration.
 
-Il drag è esclusivamente **FC → computer** e rappresenta sempre una copia. Il pannello FC non accetta file; quello del computer non avvia trascinamenti. I drop da Finder/Explorer o altre app sono ignorati. Durante una copia la destinazione rimane fissa e una seconda operazione non può sovrapporsi. Rilasciare su una sottocartella la apre come nuova destinazione.
+Drag-and-drop works only from **flight controller → computer** and always performs a copy. The flight-controller pane rejects drops; the computer pane does not start drags. Finder, Explorer, and other external drops are ignored. A transfer locks its destination and prevents another operation from overlapping it.
 
-Il pannello locale mostra le cartelle e i log Blackbox visibili; gli altri tipi di file sono esclusi dall'elenco e dal conteggio. Le cartelle precedono sempre i log anche ordinando per dimensione o data, in entrambe le direzioni. **Apri nel Finder / Apri cartella** apre la cartella con il gestore file del sistema, dove sono visibili anche gli altri tipi di file. Il divisore fra i due pannelli è regolabile.
+## Ejection and reconnecting
 
-## Espulsione e nuovo collegamento
+On macOS, **Eject flight controller** safely unmounts all volumes on the validated USB parent disk using `diskutil unmountDisk`, without forcing it. This avoids the immediate remount observed with `diskutil eject` on the SpeedyBee F7 V3.
 
-Su macOS **Espelli FC** smonta in modo sicuro tutti i volumi del disco USB selezionato (`diskutil unmountDisk`, senza forzare), dopo averne verificato l'identità. Sulla SpeedyBee F7 V3 il precedente `diskutil eject` faceva ricomparire e rimontare il disco dopo circa due secondi. Lasciando il dispositivo USB collegato ma i volumi smontati si evita questo ciclo; la memoria scompare dal Finder e dall'elenco delle FC disponibili. La stessa procedura vale dopo la copia, alla chiusura e prima del reset FLASH.
+To use the flight controller again, physically disconnect and reconnect USB, then press **Search** and **Connect**. The app does not keep a persistent blacklist, change macOS automount settings, or run a monitoring process. The disk can still appear in Disk Utility as a physical device with no mounted volume.
 
-Per usarla di nuovo, **scollega e ricollega fisicamente USB**, poi premi **Cerca** e **Connetti**. Non vengono salvati blocchi per nome o UUID né modificate le impostazioni di montaggio di macOS: la stessa FC resta utilizzabile al nuovo collegamento. Non serve tenere l'app aperta dopo l'espulsione. Il disco fisico può ancora comparire in Utility Disco come non montato; un montaggio manuale da Utility Disco resta possibile. Se lo smontaggio fallisce perché un programma usa la memoria, l'app segnala l'errore e non forza la rimozione. Windows mantiene la propria rimozione nativa, da collaudare su hardware Windows.
+Windows uses its native removal path and requires physical validation on Windows hardware.
 
-## Gestire file e cartelle sul computer
+## Managing local files
 
-- Un clic seleziona l'intera riga, evidenziata in azzurro anche quando il focus passa a un altro controllo; Cmd/Ctrl e Maiusc permettono la selezione multipla. Il doppio clic su una cartella la apre.
-- **Nuova cartella…** crea una sottocartella nella cartella corrente e la seleziona. Il nome deve essere un solo nome valido: percorsi e conflitti vengono rifiutati, senza sovrascrivere elementi esistenti.
-- **Elimina…** riguarda soltanto la selezione nel pannello Computer. La conferma mostra percorso e nomi, con **Annulla** come scelta iniziale. Confermando **Sposta nel Cestino**, le cartelle vengono cestinate con tutto il contenuto, inclusi i file non mostrati dal filtro Blackbox. È possibile recuperarle dal Cestino del sistema finché non viene svuotato.
-- Il Cestino usa l'API nativa tramite `QFile.moveToTrash`. Se fallisce, viene mostrato un errore e non viene tentata un'eliminazione definitiva. Le operazioni multiple possono essere parziali: il messaggio indica quanti elementi sono già stati spostati.
-- I comandi locali sono bloccati durante copie e altre operazioni. La selezione viene verificata nuovamente dopo la conferma e non può includere la FC aperta o sue cartelle. I link vengono cestinati come link, senza cancellarne la destinazione. Non sono disponibili rinomina o spostamenti locali fra cartelle.
+- **New folder…** creates a subfolder of the current folder. The name must be a valid single folder name; paths and collisions are refused without overwriting anything.
+- **Delete…** applies only to the Computer pane. The confirmation shows the selected paths and names. Confirming moves files and folders to the native system Trash. Folders include all their contents, including files hidden by the Blackbox filter.
+- Trash uses `QFile.moveToTrash`. If it fails, the app reports the error and never falls back to permanent deletion.
+- Local actions are blocked during transfers. The selection is validated again after confirmation and cannot include open flight-controller storage or its folders. Links are moved as links without deleting their targets.
 
-## Tempi di collegamento
+## Deletion and emptying storage
 
-L'apertura ha fasi diverse: identificazione seriale, riavvio in memoria USB, montaggio da parte del sistema operativo ed elenco dei file. **Informazioni** riporta i tempi misurati nell'ultimo collegamento, separando queste fasi. Il tempo mostrato quando l'elenco è pronto esclude la successiva lettura delle date.
-
-Per SDCARD e file FLASH individuali, l'elenco iniziale legge solo nomi e metadati del filesystem, senza aprire tutti i log. Le date vengono completate usando lo stesso worker delle operazioni USB; una copia, un'espulsione o un altro comando interrompe questa lettura dopo il file già in corso. Non vengono eseguite letture parallele sulla FC. Aggiornando l'elenco si riutilizzano soltanto le date di file con percorso, dimensione, data di modifica e offset invariati. La scansione del file complessivo per FLASH oltre 100 voli resta necessaria per individuare i voli.
-
-Prova del 18 settembre 2026: la SpeedyBee F7 V3 con 17 log ha impiegato 31,13 s per le sole letture delle intestazioni nella versione precedente. Il nuovo elenco sullo stesso volume già montato ha richiesto 0,148 s, di cui 0,012 s per l'elenco. Quest'ultimo dato non include riavvio e montaggio iniziale, né garantisce lo stesso tempo al primo accesso a freddo. La prova precedente aveva incontrato anche una lunga attesa del sistema operativo aprendo la cartella: non tutti i ritardi dipendono dall'app.
-
-## Cancellazione: limite reale della memoria
-
-| Memoria esposta da Betaflight | Elenco e copia | Eliminazione individuale | Svuotamento |
+| Betaflight storage exposed | List and copy | Individual deletion | Empty storage |
 | --- | --- | --- | --- |
-| SDCARD su volume scrivibile, incluse memorie integrate come quella della SpeedyBee F7 V3 | Sì | Sì, dopo conferma | Tutti i file di log, dopo conferma |
-| FLASH esposta come filesystem virtuale | Sì | No | Erase completo tramite connessione USB normale |
-| SDCARD di sola lettura | Sì | No | Non disponibile |
+| Writable SDCARD volume, including built-in storage such as SpeedyBee F7 V3 | Yes | Yes, after confirmation | All Blackbox log files, after confirmation |
+| FLASH exposed as a virtual filesystem | Yes | No | Full erase over a normal USB connection |
+| Read-only SDCARD | Yes | No | Unavailable |
 
-L'eliminazione singola richiede file di log validi. **Svuota memoria…** su SDCARD include anche log vuoti o incompleti; elimina soltanto `LOG*.BFL` numerati, nella radice o nella cartella `LOGS`, senza usare il cestino. Eventuali altri file, inclusi file già nel cestino del sistema, rimangono sulla memoria: non è una formattazione del volume.
+Individual deletion requires validated Blackbox log files. On writable SDCARD, **Empty storage…** includes empty and incomplete Blackbox logs and deletes only numbered `LOG*.BFL` files in the root or `LOGS` folder. It does not format the volume and leaves other files untouched.
 
-## Svuotare la memoria Blackbox
+For FLASH, the virtual USB disk does not accept deletion. Eject it, disconnect every power source from the flight controller, and reconnect USB only. Press **Search**, choose the flight controller, and press **Empty storage…** before **Connect**. The app reads the board, UID, and FLASH capacity. The final confirmation identifies that exact flight controller and states that its logs will be lost.
 
-**SDCARD scrivibile:** con la memoria aperta premi **Svuota memoria…** sotto l'elenco della FC. La conferma mostra volume, percorso, numero e dimensione totale di tutti i log. La selezione delle righe non limita questa operazione. Dopo la conferma l'app elimina tutti quei log e aggiorna l'elenco. Se l'elenco o il volume cambiano dopo la conferma, l'operazione viene bloccata.
+Only after confirmation does the app send `MSP_DATAFLASH_ERASE` (72). The flight controller must run Betaflight, use Blackbox FLASH, and be disarmed. The app waits through `MSP_DATAFLASH_SUMMARY` (70) for ready storage with 0 used bytes, for up to 10 minutes. The hardware erase cannot be cancelled after it is sent. An error is never shown as success and does not cause an automatic second erase.
 
-**FLASH:** il disco virtuale USB non accetta cancellazioni. Se è aperto, **Svuota memoria…** guida prima all'espulsione. Scollega tutte le alimentazioni della FC e ricollega solo USB. Premi **Cerca**, scegli la FC e premi **Svuota memoria… prima di Connetti**. L'app legge modello, UID e capacità della FLASH; la conferma finale identifica questa FC e avverte che tutti i suoi log verranno persi. Una FC con UID o capacità diversi al momento dell'operazione viene rifiutata.
+No real erase or deletion is performed by the automated tests.
 
-Solo dopo la conferma viene inviato `MSP_DATAFLASH_ERASE` (72). La FC deve usare Betaflight, avere Blackbox su FLASH ed essere disarmata. L'app attende tramite `MSP_DATAFLASH_SUMMARY` (70) memoria pronta e 0 byte usati, fino a 10 minuti. L'erase hardware non può essere annullato dopo l'invio: chiusura e annullamento sono disabilitati durante il monitoraggio. Un errore di comunicazione non viene presentato come successo e non provoca un secondo erase automatico.
+## Compatibility and limits
 
-La cancellazione riguarda la memoria Blackbox, non il ripristino delle impostazioni della FC. Le copie sul computer rimangono disponibili. I comandi di erase sono stati verificati su risposte simulate; non è stato eseguito uno svuotamento reale durante lo sviluppo.
+- macOS and Windows only. The current Mac build targets **Intel x86_64, macOS 14+**. Apple Silicon needs a dedicated build or Rosetta.
+- One flight controller at a time. After a restart, the app looks for one new external USB volume and stops if multiple new volumes appear.
+- Selecting an already-mounted disk cannot repeat MSP verification of board and firmware; the UI labels it as storage already connected.
+- Flight controllers without MSC are not supported yet; there is no serial fallback for flash downloads.
+- Initial supported copy destinations are local APFS/HFS+ volumes on macOS or NTFS on Windows. The conflict-safe publishing procedure uses hard links, so exFAT is unsupported for now.
+- Builds are not signed with Apple or Microsoft distribution certificates and are not notarized.
 
-Per le flash che espongono al massimo 100 file, l'app legge l'indice del file complessivo e mostra anche i voli successivi. I voli estratti ricevono un nome `VOLO_00101.BBL`, perché non esiste un file individuale originale oltre il limite del firmware.
+## Development and tests
 
-## Compatibilità e limiti
-
-- Solo Mac e Windows. La build Mac di questa consegna è per **Intel x86_64, macOS 14+**; Apple Silicon richiede una build dedicata oppure Rosetta.
-- Una FC selezionata per volta. Dopo il riavvio l'app cerca un nuovo volume USB esterno e si ferma se ne compaiono più di uno. Evitare di collegare altri dischi durante il passaggio.
-- Selezionando un disco già montato non è possibile verificare di nuovo via MSP modello e firmware; l'interfaccia lo segnala come memoria già collegata.
-- Le FC senza MSC non sono supportate in questa fase. Nessuno scaricamento seriale alternativo della flash.
-- Destinazione su disco locale Mac (APFS/HFS+) o Windows (NTFS): la pubblicazione senza sovrascrittura utilizza hard link. Filesystem che non li supportano, come exFAT, non sono destinazioni supportate nella prima versione.
-- Le copie locali restano disponibili dopo un errore successivo. Un errore durante una cancellazione multipla può lasciare un'operazione parziale, indicata nel messaggio: aggiornare l'elenco.
-- L'espulsione da macOS/Windows non riavvia Betaflight. Scollegare e ricollegare l'alimentazione USB per uscire dalla modalità memoria.
-- Le build locali non sono firmate con un certificato Apple/Microsoft di distribuzione e non sono notarizzate. Per distribuire l'app ad altre persone serviranno firma e test sui sistemi destinatari.
-
-## Sviluppo e test
-
-Python 3.10–3.14. Si consiglia 3.13 per nuove build Windows. Le dipendenze sono fissate in `requirements.txt`.
+Python 3.10–3.14 is supported; Python 3.13 is recommended for new Windows builds. Dependencies are pinned in `requirements.txt`.
 
 ```sh
 python3 -m venv .venv
@@ -92,35 +76,26 @@ python3 -m venv .venv
 .venv/bin/python run_app.py
 ```
 
-Su Windows sostituire `.venv/bin/python` con `.venv\Scripts\python.exe`.
+On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`.
 
-La suite usa cartelle temporanee e risposte dei dispositivi simulate: non cancella file su FC reali. Include prove dell'interfaccia Qt, della copia, dei conflitti, della cancellazione selettiva e degli adattatori. I test dei comandi Windows eseguiti sul Mac verificano i contratti, **non sostituiscono un collaudo Windows**.
+Tests use temporary folders and simulated device responses, so they never delete logs from real flight controllers. They cover the Qt interface, copying, collisions, selective deletion, complete emptying, local-file actions, drag direction, and platform adapters.
 
-`run_app.py --demo` apre una dimostrazione con file finti temporanei; il banner giallo lo indica. Non vengono toccati dispositivi reali. I file demo non contengono un volo utilizzabile per l'analisi.
+`run_app.py --demo` starts the interface with temporary sample files only. A yellow banner makes the demo mode explicit and no real device is touched.
 
-## Creare gli eseguibili
+## Building an application bundle
 
 ```sh
 .venv/bin/python tools/build.py
 ```
 
-La build include interprete, Qt e dipendenze; il destinatario non deve installare Python. Su Mac produce `dist/Blackbox Desk.app`, su Windows `dist/Blackbox Desk/Blackbox Desk.exe` con la sua cartella di dipendenze. I pacchetti vanno compilati sul sistema operativo di destinazione. Non copiare soltanto l'exe fuori dalla sua cartella.
+The build includes Python, Qt, and dependencies. On macOS it creates `dist/Blackbox Desk.app`; on Windows it creates `dist/Blackbox Desk/Blackbox Desk.exe` and its required dependency folder. Build packages on their destination operating system. Do not copy only the executable out of the Windows folder.
 
-La prima build scarica i testi delle licenze ufficiali in `resources/licenses`; vengono conservati e inclusi nei pacchetti successivi. Il comando produce anche uno ZIP distribuibile e verifica l'avvio dell'eseguibile.
+The GitHub Actions workflow in `.github/workflows/build.yml` runs tests and builds on macOS and Windows.
 
-La procedura `.github/workflows/build.yml`, se il progetto viene in futuro caricato su GitHub, esegue test e build su Windows e Mac; non è stata pubblicata o eseguita durante questa consegna.
-
-## Fonti tecniche
+## Technical sources
 
 - [Betaflight: USB Mass Storage](https://betaflight.com/docs/wiki/guides/current/Mass-Storage-Device-Support)
-- [Configurazione SpeedyBee F7 V3: SDCARD integrata](https://support.betaflight.com/targets/SPEEDYBEEF7V3)
-- [Filesystem virtuale flash Betaflight](https://github.com/betaflight/betaflight/blob/2026.6.1/src/main/msc/emfat_file.c)
-- [Protocollo MSP Betaflight](https://github.com/betaflight/betaflight/blob/2026.6.1/src/main/msp/msp.c)
-- [Qt for Python: distribuzione desktop](https://doc.qt.io/qtforpython-6/faq/distribution.html)
-- [Qt: cestino nativo per file, cartelle e link](https://doc.qt.io/qtforpython-6/PySide6/QtCore/QFile.html#PySide6.QtCore.QFile.moveToTrash)
-
-## Prossime fasi
-
-1. Collaudo dell'app sulla FC dell'utente: elenco, copia, espulsione; prova di cancellazione soltanto su un log scelto esplicitamente dall'utente e già salvato.
-2. Build e collaudo su Windows con almeno una FC FLASH e una SDCARD.
-3. Collaudo hardware dello svuotamento completo, soltanto su iniziativa dell'utente dalla finestra di conferma; eventuale scaricamento seriale per FC senza MSC.
+- [SpeedyBee F7 V3 configuration: built-in SDCARD](https://support.betaflight.com/targets/SPEEDYBEEF7V3)
+- [Betaflight flash virtual filesystem](https://github.com/betaflight/betaflight/blob/2026.6.1/src/main/msc/emfat_file.c)
+- [Betaflight MSP protocol](https://github.com/betaflight/betaflight/blob/2026.6.1/src/main/msp/msp.c)
+- [Qt for Python desktop distribution](https://doc.qt.io/qtforpython-6/faq/distribution.html)

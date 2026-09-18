@@ -251,18 +251,18 @@ class Window(QMainWindow):
         device = self.device_combo.currentData()
         reset_possible = (available and (self.session.storage == "FLASH" or self.session.can_delete)) or (not available and device is not None and bool(device.port))
         self.reset_button.setEnabled(enabled and reset_possible)
-        self.reset_button.setToolTip("Elimina tutti i log Blackbox dopo conferma. Per la FLASH serve la connessione USB normale.")
+        self.reset_button.setToolTip("Delete all Blackbox logs after confirmation. FLASH requires a normal USB connection.")
         self.refresh_button.setEnabled(enabled and available)
         self.latest_button.setEnabled(enabled and available and bool(self.session.logs))
         self.copy_button.setEnabled(enabled and bool(selected))
         self.delete_button.setEnabled(enabled and bool(selected) and self.session.can_delete)
-        self.delete_button.setToolTip("Eliminazione definitiva, dopo conferma." if available and self.session.can_delete else "La cancellazione singola richiede una memoria SDCARD scrivibile.")
+        self.delete_button.setToolTip("Permanent deletion, after confirmation." if available and self.session.can_delete else "Individual deletion requires writable SDCARD storage.")
         self.all_button.setEnabled(enabled and available and bool(self.session.logs))
         self.none_button.setEnabled(enabled and available and bool(self.session.logs))
         self.browser.set_locked(not enabled)
         self.auto_eject.setEnabled(enabled)
         self.table.setEnabled(enabled)
-        self.selection_label.setText(f"{len(selected)} selezionati · {human_size(sum(e.size for e in selected))}" if selected else "Nessun log selezionato")
+        self.selection_label.setText(f"{len(selected)} selected · {human_size(sum(e.size for e in selected))}" if selected else "No logs selected")
 
     def start(self, function, success, cancellable=True):
         if self.busy:
@@ -298,7 +298,7 @@ class Window(QMainWindow):
         if error:
             self.status.setText(str(error))
             if self.interactive and not self.close_after_job and not isinstance(error, Cancelled):
-                QMessageBox.warning(self, "Operazione non completata", str(error))
+                QMessageBox.warning(self, "Operation not completed", str(error))
         else:
             self.success_callback(result)
         self.update_actions()
@@ -308,13 +308,13 @@ class Window(QMainWindow):
             self.close_after_job = False
             if error:
                 if self.interactive:
-                    QMessageBox.warning(self, "Memoria ancora collegata", str(error))
+                    QMessageBox.warning(self, "Storage still connected", str(error))
             else:
                 self.session = None
                 self.close()
 
     def scan(self):
-        self.status.setText("Cerco FC e memorie USB…")
+        self.status.setText("Searching for flight controllers and USB storage…")
         self.start(lambda p, c: self.backend.discover(p, c), self.show_devices)
 
     def show_devices(self, devices):
@@ -322,8 +322,8 @@ class Window(QMainWindow):
         for device in devices:
             self.device_combo.addItem(device.label, device)
         if not devices:
-            self.device_combo.addItem("Nessun dispositivo trovato", None)
-        self.status.setText(f"{len(devices)} dispositivi trovati. Scegli la FC e premi Connetti." if devices else "Nessuna FC trovata. Collega un cavo USB dati e premi Cerca.")
+            self.device_combo.addItem("No device found", None)
+        self.status.setText(f"{len(devices)} devices found. Choose the flight controller and press Connect." if devices else "No flight controller found. Connect a USB data cable and press Search.")
 
     def connect_device(self):
         device = self.device_combo.currentData()
@@ -338,38 +338,38 @@ class Window(QMainWindow):
         self.browser.source_root = session.volume.root.resolve()
         self.copied_names.clear()
         self.connection_title.setText(session.board)
-        location = "File di esempio locali" if session.demo else str(session.volume.root)
-        self.connection_detail.setText(f"{location} · {'SD / integrata' if session.storage == 'SDCARD' else session.storage}")
+        location = "Local sample files" if session.demo else str(session.volume.root)
+        self.connection_detail.setText(f"{location} · {'SD / built-in' if session.storage == 'SDCARD' else session.storage}")
         self.total_label.setText(f"{len(session.logs)} log · {human_size(sum(e.size for e in session.logs))}")
         self.table.blockSignals(True)
         self.table.setRowCount(len(session.logs))
         for row, entry in enumerate(session.logs):
-            for column, text in enumerate([entry.name, entry.recorded or "…", human_size(entry.size), "Ultimo" if row == 0 else "Disponibile"]):
+            for column, text in enumerate([entry.name, entry.recorded or "…", human_size(entry.size), "Latest" if row == 0 else "Available"]):
                 item = QTableWidgetItem(text)
                 item.setToolTip(text)
                 if column == 1 and not entry.recorded:
-                    item.setToolTip("La data verrà letta in background. Puoi già copiare il log.")
+                    item.setToolTip("The date will be read in the background. You can already copy the log.")
                 if column == 2:
                     item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 if entry.extracted:
-                    item.setToolTip("Volo individuato nel file complessivo della flash; verrà estratto durante la copia.")
+                    item.setToolTip("Flight found in the complete flash file; it will be extracted while copying.")
                 self.table.setItem(row, column, item)
         self.table.blockSignals(False)
         if session.logs:
             self.table.selectRow(0)
         self.stack.setCurrentIndex(0 if session.logs else 1)
         if not session.logs:
-            self.empty_title.setText("La memoria non contiene log")
-            self.empty_detail.setText("Dopo un volo registrato dalla Blackbox,\nricollega la FC e aggiorna l'elenco.")
+            self.empty_title.setText("Storage contains no logs")
+            self.empty_detail.setText("After a flight is recorded by Blackbox,\nreconnect the flight controller and refresh the list.")
         if session.can_delete:
-            self.capability.setText("Puoi copiare i log o eliminarli dalla FC dopo conferma. La data è mostrata solo quando registrata nel log.")
+            self.capability.setText("You can copy logs or delete them from the flight controller after confirmation. A date is shown only when recorded in the log.")
         elif session.storage == "FLASH":
-            self.capability.setText("Memoria flash: puoi copiare i log oppure usare Svuota memoria per eliminarli tutti. Non è possibile eliminarne uno solo.")
+            self.capability.setText("Flash storage: you can copy logs or use Empty storage to delete them all. Individual deletion is unavailable.")
         else:
-            self.capability.setText("Memoria di sola lettura: puoi copiare i log, ma non eliminarli da questa connessione.")
-        duration = session.timings.get("Totale fino all'elenco")
-        ready = f"Memoria pronta in {duration:.1f} s." if duration is not None else "Memoria pronta."
-        self.status.setText(ready + " L'ultimo log è già selezionato.")
+            self.capability.setText("Read-only storage: you can copy logs, but cannot delete them through this connection.")
+        duration = session.timings.get("Total until listing")
+        ready = f"Storage ready in {duration:.1f} s." if duration is not None else "Storage ready."
+        self.status.setText(ready + " The latest log is already selected.")
         self.update_actions()
         self.start_dates()
 
@@ -388,8 +388,8 @@ class Window(QMainWindow):
         self.date_job.signals.entry.connect(self.on_date)
         self.date_job.signals.failed.connect(self.on_dates_failed)
         self.date_job.signals.done.connect(self.on_dates_done)
-        # Lo stesso worker della copia: nessun accesso USB in parallelo. Una nuova
-        # operazione interrompe i metadati dopo la singola lettura già in corso.
+        # The same worker as copying: no parallel USB access. A new operation
+        # stops metadata work after the single read already in progress.
         self.pool.start(self.date_job)
 
     @Slot(int, int, str, str)
@@ -406,7 +406,7 @@ class Window(QMainWindow):
         if generation == self.date_generation and self.session:
             for row, entry in enumerate(self.session.logs):
                 if not entry.recorded:
-                    self.on_date(generation, row, "—", "Data non disponibile: " + error)
+                    self.on_date(generation, row, "—", "Date unavailable: " + error)
 
     @Slot(int)
     def on_dates_done(self, generation):
@@ -444,19 +444,19 @@ class Window(QMainWindow):
             self.browser.navigate(results[0].path.parent)
         self.browser.refresh()
         reused = sum(result.reused for result in results)
-        message = f"{len(results)} log verificati in {self.destination}."
+        message = f"{len(results)} logs verified in {self.destination}."
         if reused:
-            message += f" {reused} già presenti."
+            message += f" {reused} already present."
         if report["ejected"]:
             self.clear_session()
-            message += " Memoria espulsa: puoi scollegare il cavo."
+            message += " Storage ejected: you can disconnect the cable."
         elif report["eject_error"]:
-            message += " Espulsione non riuscita: " + report["eject_error"]
+            message += " Ejection failed: " + report["eject_error"]
         else:
             self.copied_names.update(result.entry.name for result in results)
             for row, entry in enumerate(self.session.logs):
                 if entry.name in self.copied_names:
-                    self.table.item(row, 3).setText("Copiato")
+                    self.table.item(row, 3).setText("Copied")
         self.status.setText(message)
 
     def delete_selected(self):
@@ -465,14 +465,14 @@ class Window(QMainWindow):
             return
         names = "\n".join(entry.name for entry in entries[:12])
         if len(entries) > 12:
-            names += f"\n… e altri {len(entries) - 12}"
+            names += f"\n… and {len(entries) - 12} more"
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("Elimina dalla FC")
-        box.setText(f"Eliminare definitivamente {len(entries)} log dalla memoria della FC?")
-        box.setInformativeText(names + "\n\nQuesta operazione non può essere annullata.")
-        delete = box.addButton("Elimina dalla FC", QMessageBox.ButtonRole.DestructiveRole)
-        cancel = box.addButton("Annulla", QMessageBox.ButtonRole.RejectRole)
+        box.setWindowTitle("Delete from flight controller")
+        box.setText(f"Permanently delete {len(entries)} logs from flight controller storage?")
+        box.setInformativeText(names + "\n\nThis action cannot be undone.")
+        delete = box.addButton("Delete from flight controller", QMessageBox.ButtonRole.DestructiveRole)
+        cancel = box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
         box.setDefaultButton(cancel)
         box.exec()
         if box.clickedButton() != delete:
@@ -482,16 +482,16 @@ class Window(QMainWindow):
 
     def delete_done(self, report):
         self.set_session(report["session"])
-        self.status.setText(f"Eliminati {len(report['deleted'])} log dalla FC.")
+        self.status.setText(f"Deleted {len(report['deleted'])} logs from the flight controller.")
 
     def confirm_reset(self, details):
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("Svuota memoria Blackbox")
-        box.setText("Eliminare definitivamente TUTTI i log della memoria indicata?")
-        box.setInformativeText(details + "\n\nI log sulla FC verranno persi. Le copie sul computer rimangono disponibili. Questa operazione non può essere annullata.")
-        erase = box.addButton("Svuota memoria", QMessageBox.ButtonRole.DestructiveRole)
-        cancel = box.addButton("Annulla", QMessageBox.ButtonRole.RejectRole)
+        box.setWindowTitle("Empty Blackbox storage")
+        box.setText("Permanently delete ALL logs from the specified storage?")
+        box.setInformativeText(details + "\n\nLogs on the flight controller will be lost. Copies on the computer remain available. This action cannot be undone.")
+        erase = box.addButton("Empty storage", QMessageBox.ButtonRole.DestructiveRole)
+        cancel = box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
         box.setDefaultButton(cancel)
         box.exec()
         return box.clickedButton() == erase
@@ -505,11 +505,11 @@ class Window(QMainWindow):
                 self.start(lambda p, c: self.backend.prepare_sd_reset(session, p, c), self.confirm_sd_reset)
             elif self.session.storage == "FLASH":
                 box = QMessageBox(self)
-                box.setWindowTitle("Svuota memoria FLASH")
-                box.setText("Per svuotare la FLASH bisogna uscire dalla modalità disco USB.")
-                box.setInformativeText("1. Premi Espelli e continua.\n2. Scollega tutte le alimentazioni della FC e ricollega solo USB.\n3. Premi Cerca, scegli la FC e premi Svuota memoria, prima di Connetti.\n\nLa conferma della cancellazione verrà chiesta dopo aver identificato la FC. Qui non viene ancora cancellato nulla.")
-                proceed = box.addButton("Espelli e continua", QMessageBox.ButtonRole.AcceptRole)
-                cancel = box.addButton("Annulla", QMessageBox.ButtonRole.RejectRole)
+                box.setWindowTitle("Empty FLASH storage")
+                box.setText("To empty FLASH, you must leave USB Mass Storage mode.")
+                box.setInformativeText("1. Press Eject and continue.\n2. Disconnect all power from the flight controller and reconnect USB only.\n3. Press Search, choose the flight controller, then press Empty storage before Connect.\n\nYou will be asked to confirm deletion after the flight controller is identified. Nothing is deleted yet.")
+                proceed = box.addButton("Eject and continue", QMessageBox.ButtonRole.AcceptRole)
+                cancel = box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
                 box.setDefaultButton(cancel)
                 box.exec()
                 if box.clickedButton() == proceed:
@@ -522,36 +522,36 @@ class Window(QMainWindow):
 
     def reset_reconnect(self, _):
         self.clear_session()
-        self.status.setText("Memoria espulsa. Scollega tutte le alimentazioni e ricollega USB; premi Cerca, scegli la FC e poi Svuota memoria (prima di Connetti).")
+        self.status.setText("Storage ejected. Disconnect all power and reconnect USB; press Search, choose the flight controller, then press Empty storage before Connect.")
 
     def confirm_sd_reset(self, plan):
         if not plan.entries:
-            self.status.setText("La memoria non contiene file di log da eliminare.")
+            self.status.setText("Storage contains no log files to delete.")
             return
         size = sum(entry[1] for entry in plan.entries)
-        details = (f"{plan.session.board}\nMemoria: {plan.session.volume.label}\n{plan.session.volume.root}\n"
-                   f"Tutti i {len(plan.entries)} file di log: {human_size(size)}.\n"
-                   "Sono inclusi anche i log vuoti o incompleti. Eventuali file diversi dai log rimangono sulla memoria.")
+        details = (f"{plan.session.board}\nStorage: {plan.session.volume.label}\n{plan.session.volume.root}\n"
+                   f"All {len(plan.entries)} log files: {human_size(size)}.\n"
+                   "Empty and incomplete logs are included. Any non-log files remain in storage.")
         if self.confirm_reset(details):
             self.start(lambda p, c: self.backend.reset_sd(plan, True, p, c), self.reset_sd_done)
         else:
-            self.status.setText("Svuotamento annullato. Nessun log eliminato.")
+            self.status.setText("Emptying cancelled. No logs deleted.")
 
     def reset_sd_done(self, report):
         self.set_session(report["session"])
-        self.status.setText(f"Memoria Blackbox svuotata: eliminati {report['deleted']} log e liberato il loro spazio.")
+        self.status.setText(f"Blackbox storage emptied: deleted {report['deleted']} logs and freed their space.")
 
     def confirm_flash_reset(self, plan):
         details = (f"{plan.board} · Betaflight {plan.firmware}\nFC: {plan.device.port}\n"
-                   f"Identificativo: {plan.uid}\nFLASH Blackbox: {human_size(plan.capacity)}; usati: {human_size(plan.used)}.\n"
-                   "Verrà cancellata l'intera memoria Blackbox. Attendi il completamento mantenendo la FC collegata.")
+                   f"Identifier: {plan.uid}\nBlackbox FLASH: {human_size(plan.capacity)}; used: {human_size(plan.used)}.\n"
+                   "All Blackbox storage will be erased. Keep the flight controller connected until completion.")
         if self.confirm_reset(details):
             self.start(lambda p, c: self.backend.reset_flash(plan, True, p, c), self.reset_flash_done, cancellable=False)
         else:
-            self.status.setText("Svuotamento annullato. Nessun comando di cancellazione inviato.")
+            self.status.setText("Emptying cancelled. No erase command was sent.")
 
     def reset_flash_done(self, state):
-        self.status.setText(f"Memoria FLASH svuotata e verificata: {human_size(state['capacity'])} disponibili, 0 byte usati. Puoi premere Connetti per aprire la memoria.")
+        self.status.setText(f"FLASH storage emptied and verified: {human_size(state['capacity'])} available, 0 bytes used. You can press Connect to open storage.")
 
     def eject(self):
         if self.session:
@@ -560,7 +560,7 @@ class Window(QMainWindow):
 
     def eject_done(self, _):
         self.clear_session()
-        self.status.setText("Memoria espulsa. Per usarla di nuovo, scollega e ricollega il cavo USB, poi premi Cerca.")
+        self.status.setText("Storage ejected. To use it again, disconnect and reconnect the USB cable, then press Search.")
 
     def clear_session(self):
         self.cancel_dates()
@@ -568,21 +568,21 @@ class Window(QMainWindow):
         self.browser.source_root = None
         self.session = None
         self.device_combo.clear()
-        self.device_combo.addItem("Cerca una FC collegata", None)
+        self.device_combo.addItem("Search for a connected flight controller", None)
         self.table.setRowCount(0)
         self.stack.setCurrentIndex(1)
-        self.empty_title.setText("Memoria espulsa")
-        self.empty_detail.setText("I log salvati sono nella cartella sul computer.\nScollega e ricollega il cavo USB, poi premi Cerca.")
-        self.connection_title.setText("Memoria scollegata")
-        self.connection_detail.setText("Scollega e ricollega USB per una nuova sessione.")
-        self.total_label.setText("Nessuna memoria aperta")
-        self.capability.setText("I log salvati sul computer rimangono disponibili.")
+        self.empty_title.setText("Storage ejected")
+        self.empty_detail.setText("Saved logs are in the folder on your computer.\nDisconnect and reconnect the USB cable, then press Search.")
+        self.connection_title.setText("Storage disconnected")
+        self.connection_detail.setText("Disconnect and reconnect USB to start a new session.")
+        self.total_label.setText("No storage open")
+        self.capability.setText("Saved logs on the computer remain available.")
 
     def cancel(self):
         if not self.can_cancel:
             return
         self.cancel_event.set()
-        self.status.setText("Annullo l'operazione in corso…")
+        self.status.setText("Cancelling the current operation…")
 
     def choose_destination(self):
         self.browser.choose_folder()
@@ -590,38 +590,38 @@ class Window(QMainWindow):
     def local_error(self, error):
         self.status.setText(str(error))
         if self.interactive:
-            QMessageBox.warning(self, "Operazione locale non completata", str(error))
+            QMessageBox.warning(self, "Local operation not completed", str(error))
 
     def create_local_folder(self):
         if self.busy or not self.browser.new_folder_button.isEnabled():
             return
         root, protected = self.browser.path, self.browser.source_root
-        name, accepted = QInputDialog.getText(self, "Nuova cartella sul computer", f"Crea in: {root}\n\nNome della cartella:")
+        name, accepted = QInputDialog.getText(self, "New folder on computer", f"Create in: {root}\n\nFolder name:")
         if not accepted:
             return
         def created(path):
             self.browser.select_path(path)
-            self.status.setText(f"Cartella creata: {path}")
+            self.status.setText(f"Folder created: {path}")
         self.start(lambda p, c: local_files.create_folder(root, name, protected), created)
 
     def confirm_local_trash(self, plan):
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("Elimina dal computer")
+        box.setWindowTitle("Delete from computer")
         box.setTextFormat(Qt.TextFormat.PlainText)
-        selection_text = "1 elemento" if len(plan.entries) == 1 else f"{len(plan.entries)} elementi"
-        box.setText(f"Spostare {selection_text} nel Cestino?")
+        selection_text = "1 item" if len(plan.entries) == 1 else f"{len(plan.entries)} items"
+        box.setText(f"Move {selection_text} to the Trash?")
         names = "\n".join(entry.path.name for entry in plan.entries[:12])
         if len(plan.entries) > 12:
-            names += f"\n… e altri {len(plan.entries) - 12} (vedi dettagli)"
-        details = f"Cartella: {plan.root}\n\n{names}"
+            names += f"\n… and {len(plan.entries) - 12} more (see details)"
+        details = f"Folder: {plan.root}\n\n{names}"
         if any(entry.is_directory for entry in plan.entries):
-            details += "\n\nLe cartelle saranno spostate con TUTTO il contenuto, inclusi i file non mostrati nell'elenco."
-        details += "\n\nPuoi recuperare gli elementi dal Cestino finché non viene svuotato."
+            details += "\n\nFolders will be moved with ALL their contents, including files not shown in the list."
+        details += "\n\nYou can recover items from the Trash until it is emptied."
         box.setInformativeText(details)
         box.setDetailedText("\n".join(str(entry.path) for entry in plan.entries))
-        trash = box.addButton("Sposta nel Cestino", QMessageBox.ButtonRole.DestructiveRole)
-        cancel = box.addButton("Annulla", QMessageBox.ButtonRole.RejectRole)
+        trash = box.addButton("Move to Trash", QMessageBox.ButtonRole.DestructiveRole)
+        cancel = box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
         box.setDefaultButton(cancel)
         box.setEscapeButton(cancel)
         box.exec()
@@ -639,7 +639,7 @@ class Window(QMainWindow):
         if not self.confirm_local_trash(plan):
             return
         self.start(lambda p, c: local_files.trash_items(plan, protected, confirmed=True, progress=p, cancel=c),
-                   lambda moved: self.status.setText(f"Spostati nel Cestino: {len(moved)}. Cartella: {plan.root}"))
+                   lambda moved: self.status.setText(f"Moved to Trash: {len(moved)}. Folder: {plan.root}"))
 
     def save_preferences(self, *_):
         if self.interactive and not self.demo:
@@ -650,27 +650,27 @@ class Window(QMainWindow):
         if self.destination.is_dir():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.destination)))
         else:
-            self.status.setText("La cartella verrà creata quando copierai il primo log.")
+            self.status.setText("The folder will be created when you copy the first log.")
 
     def about(self):
         timing_text = ""
         if self.connection_timings:
-            timing_text = "\n\nUltimo collegamento (date lette successivamente):\n" + "\n".join(
+            timing_text = "\n\nLast connection (dates read afterward):\n" + "\n".join(
                 f"{label}: {seconds:.2f} s" for label, seconds in self.connection_timings.items())
-        QMessageBox.information(self, "Betaflight Blackbox Desk", f"Betaflight Blackbox Desk {__version__}\n\nFC Betaflight 4.3+ con Blackbox e USB Mass Storage.\nFLASH: copia e svuotamento completo tramite connessione USB normale.\nSDCARD scrivibile: copia, cancellazione singola e di tutti i log.\n\nLa versione Windows richiede una build e una verifica su Windows.\nNessun account, caricamento online o servizio in background.\n\nPython · PySide6 / Qt (LGPLv3) · pySerial{timing_text}")
+        QMessageBox.information(self, "Betaflight Blackbox Desk", f"Betaflight Blackbox Desk {__version__}\n\nBetaflight 4.3+ flight controller with Blackbox and USB Mass Storage.\nFLASH: copying and complete erasure through a normal USB connection.\nWritable SDCARD: copy, individual deletion, and deletion of all logs.\n\nThe Windows version requires a Windows build and validation.\nNo account, online upload, or background service.\n\nPython · PySide6 / Qt (LGPLv3) · pySerial{timing_text}")
 
     def closeEvent(self, event):
         if self.busy:
             if not self.can_cancel:
-                self.status.setText("Svuotamento FLASH in corso: attendi il completamento e mantieni la FC collegata.")
+                self.status.setText("FLASH emptying in progress: wait for completion and keep the flight controller connected.")
                 event.ignore()
                 return
             self.cancel()
-            self.status.setText("Annullo l'operazione. Attendi il termine prima di chiudere.")
+            self.status.setText("Cancelling the operation. Wait for it to finish before closing.")
             event.ignore()
             return
         if self.session and self.interactive and not self.closing_dates:
-            answer = QMessageBox.question(self, "Chiudi Blackbox Desk", "Vuoi espellere la memoria della FC prima di chiudere?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Yes)
+            answer = QMessageBox.question(self, "Close Betaflight Blackbox Desk", "Do you want to eject flight controller storage before closing?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Yes)
             if answer == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return
@@ -692,7 +692,7 @@ class Window(QMainWindow):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Betaflight Blackbox Desk")
-    parser.add_argument("--demo", action="store_true", help="Usa file di esempio locali, senza dispositivi reali")
+    parser.add_argument("--demo", action="store_true", help="Use local sample files without real devices")
     parser.add_argument("--snapshot", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)

@@ -91,7 +91,7 @@ class FlashEraseTests(unittest.TestCase):
 
     def test_connection_loss_never_retries_erase_or_claims_success(self):
         connection = EraseMSP(changes={msp.FLASH_ERASE: TimeoutError("ack lost")})
-        with self.assertRaisesRegex(AppError, "non verificato"):
+        with self.assertRaisesRegex(AppError, "not verified"):
             connection.erase_flash(UID_TEXT, CAPACITY, True)
         self.assertEqual(connection.calls.count((msp.FLASH_ERASE, b"")), 1)
         self.assertFalse(connection._erase_authorized)
@@ -99,7 +99,7 @@ class FlashEraseTests(unittest.TestCase):
     def test_erase_timeout_is_not_success(self):
         connection = EraseMSP()
         with mock.patch.object(msp.time, "monotonic", side_effect=[0, 601]):
-            with self.assertRaisesRegex(AppError, "non verificato"):
+            with self.assertRaisesRegex(AppError, "not verified"):
                 connection.erase_flash(UID_TEXT, CAPACITY, True)
 
     def test_cancel_after_send_does_not_interrupt_hardware_monitoring(self):
@@ -154,7 +154,7 @@ class ResetBackendTests(unittest.TestCase):
     def test_changed_sd_listing_or_volume_aborts_before_deletion(self):
         plan = self.backend.prepare_sd_reset(self.session)
         (self.session.volume.root / "LOGS" / "LOG00099.BFL").write_bytes(b"new")
-        with self.assertRaisesRegex(AppError, "cambiato"):
+        with self.assertRaisesRegex(AppError, "changed"):
             self.backend.reset_sd(plan, True)
         self.assertEqual(len(files.sd_reset_entries(self.session)), 7)
         with mock.patch.object(self.backend.volumes, "validate", side_effect=AppError("replaced")):
@@ -167,7 +167,7 @@ class ResetBackendTests(unittest.TestCase):
         event = threading.Event()
         def progress(*_):
             event.set()
-        with self.assertRaisesRegex(AppError, "eliminati 1 di 6"):
+        with self.assertRaisesRegex(AppError, "deleted 1 of 6"):
             self.backend.reset_sd(plan, True, progress, event)
         self.assertEqual(len(files.sd_reset_entries(self.session)), 5)
 
@@ -223,7 +223,7 @@ class ResetUITests(unittest.TestCase):
             dialog.reject()
         QTimer.singleShot(0, close_dialog)
         self.assertFalse(self.window.confirm_reset("Memoria di prova"))
-        self.assertEqual(default, ["Annulla"])
+        self.assertEqual(default, ["Cancel"])
 
     def test_sd_reset_dialog_cancel_preserves_files(self):
         with mock.patch.object(self.window, "confirm_reset", return_value=False) as confirm:
@@ -238,7 +238,7 @@ class ResetUITests(unittest.TestCase):
             self.wait_job()
         self.assertEqual(self.window.session.logs, [])
         self.assertEqual(self.window.table.rowCount(), 0)
-        self.assertIn("svuotata", self.window.status.text())
+        self.assertIn("storage emptied", self.window.status.text())
 
     def test_flash_reset_cancel_never_calls_backend(self):
         plan = FlashResetPlan(Device("serial", "FC", port="/test"), "FC", "4.5", UID_TEXT, CAPACITY, 512)

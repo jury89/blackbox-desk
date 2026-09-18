@@ -1,4 +1,4 @@
-"""Liste file native e drag interno, esclusivamente in direzione FC → computer."""
+"""Native file lists and internal drag, exclusively from the flight controller to the computer."""
 
 from pathlib import Path
 
@@ -22,7 +22,7 @@ class FCLogTable(QTableWidget):
         self.setAcceptDrops(False)
         self.viewport().setAcceptDrops(False)
         self.setDefaultDropAction(Qt.DropAction.CopyAction)
-        self.setAccessibleName("Log presenti sulla flight controller")
+        self.setAccessibleName("Logs on the flight controller")
 
     def startDrag(self, supported_actions):
         mime = self.owner.drag_mime()
@@ -30,7 +30,7 @@ class FCLogTable(QTableWidget):
             return
         drag = QDrag(self)
         drag.setMimeData(mime)
-        # Nessun MoveAction: il completamento del drag non rimuove righe o log.
+        # No MoveAction: completing the drag does not remove rows or logs.
         drag.exec(Qt.DropAction.CopyAction, Qt.DropAction.CopyAction)
 
     def dragEnterEvent(self, event):
@@ -46,8 +46,8 @@ class FCLogTable(QTableWidget):
 class LocalFileModel(QFileSystemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Icone leggere e costanti, senza interrogare servizi di anteprima
-        # del sistema operativo per ogni file o cartella della destinazione.
+        # Lightweight, stable icons without asking operating-system preview
+        # services about every file or folder in the destination.
         self.icons = {}
         for folder in (False, True):
             pixmap = QPixmap(20, 20)
@@ -77,12 +77,12 @@ class LocalFileModel(QFileSystemModel):
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return ["Nome", "Dimensione", "Tipo", "Modificato"][section]
+            return ["Name", "Size", "Type", "Modified"][section]
         return super().headerData(section, orientation, role)
 
 
 class LocalLogFilterModel(QSortFilterProxyModel):
-    """Cartelle navigabili sempre in cima, poi solo log Blackbox locali."""
+    """Browsable folders always come first, followed only by local Blackbox logs."""
 
     def __init__(self, source, parent=None):
         super().__init__(parent)
@@ -144,7 +144,7 @@ class LocalFilesView(QTreeView):
         self.setDropIndicatorShown(False)
         self.setSortingEnabled(True)
         self.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.setAccessibleName("Cartelle e log Blackbox sul computer")
+        self.setAccessibleName("Folders and Blackbox logs on the computer")
 
     def startDrag(self, supported_actions):
         return  # I file del computer non diventano mai sorgenti di un drag.
@@ -166,7 +166,7 @@ class LocalFilesView(QTreeView):
             self.style().unpolish(self)
             self.style().polish(self)
             self.viewport().update()
-        self.browser.hint.setText(f"Rilascia per copiare in «{target.name or target}»" if active and target else self.browser.default_hint)
+        self.browser.hint.setText(f"Drop to copy to “{target.name or target}”" if active and target else self.browser.default_hint)
 
     def dragEnterEvent(self, event):
         self.dragMoveEvent(event)
@@ -200,7 +200,7 @@ class LocalFilesView(QTreeView):
             painter = QPainter(self.viewport())
             painter.setPen(QColor("#62738B"))
             painter.drawText(self.viewport().rect().adjusted(18, 20, -18, -20), Qt.AlignmentFlag.AlignCenter,
-                             "Trascina qui i log della FC\noppure scegli un'altra cartella.")
+                             "Drag flight-controller logs here\nor choose another folder.")
 
 
 class LocalBrowser(QWidget):
@@ -214,7 +214,7 @@ class LocalBrowser(QWidget):
         self.locked = False
         self.source_root = None
         self.allow_drop, self.receive_drop = allow_drop, receive_drop
-        self.default_hint = "Doppio clic sulle cartelle per entrare. Rilascia i log qui o su una sottocartella."
+        self.default_hint = "Double-click a folder to open it. Drop logs here or on a subfolder."
         self.filesystem = LocalFileModel(self)
         self.filesystem.setReadOnly(True)
         self.filesystem.setOption(QFileSystemModel.Option.DontUseCustomDirectoryIcons, True)
@@ -230,23 +230,23 @@ class LocalBrowser(QWidget):
         layout.setSpacing(10)
         navigation = QHBoxLayout()
         self.back_button = QPushButton("←")
-        self.back_button.setAccessibleName("Cartella precedente")
-        self.back_button.setToolTip("Indietro")
+        self.back_button.setAccessibleName("Previous folder")
+        self.back_button.setToolTip("Back")
         self.up_button = QPushButton("↑")
-        self.up_button.setAccessibleName("Cartella superiore")
-        self.up_button.setToolTip("Cartella superiore")
+        self.up_button.setAccessibleName("Parent folder")
+        self.up_button.setToolTip("Parent folder")
         for button in (self.back_button, self.up_button):
             button.setFixedWidth(36)
             navigation.addWidget(button)
-        self.choose_button = QPushButton("Scegli…")
-        self.refresh_button = QPushButton("Aggiorna")
+        self.choose_button = QPushButton("Choose…")
+        self.refresh_button = QPushButton("Refresh")
         navigation.addWidget(self.choose_button)
         navigation.addStretch()
         navigation.addWidget(self.refresh_button)
         layout.addLayout(navigation)
         self.path_edit = QLineEdit(str(self.path))
-        self.path_edit.setAccessibleName("Percorso della cartella sul computer")
-        self.path_edit.setToolTip("Scrivi un percorso e premi Invio")
+        self.path_edit.setAccessibleName("Folder path on the computer")
+        self.path_edit.setToolTip("Enter a path and press Return")
         self.path_edit.setMinimumWidth(0)
         layout.addWidget(self.path_edit)
         self.count = QLabel()
@@ -255,11 +255,11 @@ class LocalBrowser(QWidget):
         self.count.setWordWrap(True)
         actions = QHBoxLayout()
         actions.addWidget(self.count, 1)
-        self.new_folder_button = QPushButton("Nuova cartella…")
-        self.new_folder_button.setToolTip("Crea una sottocartella nella cartella corrente")
-        self.trash_button = QPushButton("Elimina…")
+        self.new_folder_button = QPushButton("New folder…")
+        self.new_folder_button.setToolTip("Create a subfolder in the current folder")
+        self.trash_button = QPushButton("Delete…")
         self.trash_button.setObjectName("danger")
-        self.trash_button.setToolTip("Sposta gli elementi locali selezionati nel Cestino, dopo conferma")
+        self.trash_button.setToolTip("Move selected local items to the Trash after confirmation")
         actions.addWidget(self.new_folder_button)
         actions.addWidget(self.trash_button)
         layout.addLayout(actions)
@@ -291,9 +291,9 @@ class LocalBrowser(QWidget):
         try:
             target = Path(path).expanduser().resolve()
             if not self.destination_allowed(target):
-                raise ValueError("Scegli una cartella sul computer, fuori dalla memoria della FC.")
+                raise ValueError("Choose a folder on your computer, outside the flight controller storage.")
             if not target.is_dir() and not (allow_missing and not target.exists()):
-                raise ValueError("La cartella non esiste o non è accessibile.")
+                raise ValueError("The folder does not exist or cannot be accessed.")
         except (ValueError, OSError, RuntimeError) as error:
             self.path_edit.setText(str(self.path))
             self.message.emit(str(error))
@@ -317,7 +317,7 @@ class LocalBrowser(QWidget):
                 self.set_locked(False)
 
     def choose_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Cartella sul computer", str(self.path if self.path.exists() else self.path.parent))
+        folder = QFileDialog.getExistingDirectory(self, "Folder on computer", str(self.path if self.path.exists() else self.path.parent))
         if folder:
             self.navigate(folder)
 
@@ -344,11 +344,12 @@ class LocalBrowser(QWidget):
         self.new_folder_button.setEnabled(available)
         selected = self.selected_paths()
         self.trash_button.setEnabled(available and bool(selected))
-        selection_text = "1 elemento selezionato sul computer" if len(selected) == 1 else f"{len(selected)} elementi selezionati sul computer"
+        selection_text = "1 item selected on the computer" if len(selected) == 1 else f"{len(selected)} items selected on the computer"
         self.hint.setText(selection_text if selected else self.default_hint)
 
     def refresh(self):
         if self.path.is_dir():
+            self.filesystem.setRootPath("")
             root_index = self.model.mapFromSource(self.filesystem.setRootPath(str(self.path)))
             if self.view.model() is not self.model:
                 self.view.setModel(self.model)
@@ -374,13 +375,15 @@ class LocalBrowser(QWidget):
         if not hasattr(self, "view"):
             return
         if not self.path.exists():
-            self.count.setText("La cartella verrà creata alla prima copia")
+            self.count.setText("The folder will be created when you copy the first log")
         else:
             parent = self.model.path_index(self.path)
             count = self.model.rowCount(parent) if parent.isValid() else 0
             folders = sum(self.model.isDir(self.model.index(row, 0, parent)) for row in range(count))
-            folder_label = "cartella" if folders == 1 else "cartelle"
-            self.count.setText(f"{folders} {folder_label} · {count - folders} log Blackbox")
+            folder_label = "folder" if folders == 1 else "folders"
+            logs = count - folders
+            log_label = "Blackbox log" if logs == 1 else "Blackbox logs"
+            self.count.setText(f"{folders} {folder_label} · {logs} {log_label}")
 
     def set_locked(self, locked):
         self.locked = locked

@@ -1,27 +1,25 @@
-# Direzione dell'interfaccia
+# Interface direction
 
-Un gestore a due pannelli per recuperare i voli. La FC occupa la metà sinistra; il computer la metà destra. Il divisore è regolabile e le due liste restano affiancate. Collegamento e comandi della FC rimangono nel suo pannello, navigazione locale nel pannello Computer. Nessun terzo pannello che sottragga spazio ai file.
+A two-pane manager for retrieving flight logs. The flight controller occupies the left half and the computer occupies the right half. The splitter is adjustable and the lists remain side by side. Flight-controller connection and controls stay in the left pane; local navigation stays in the Computer pane. There is no third pane that takes space away from files.
 
 ```text
-Betaflight Blackbox Desk          Trascina i log dalla FC al computer
+Betaflight Blackbox Desk          Drag logs from the flight controller to your computer
 Flight controller                 │ Computer
-Dispositivo · Cerca · Connetti     │ Indietro · Su · Percorso · Scegli
-Modello e memoria                 │ Cartella corrente
-Log · Registrato · Dimensione     │ Nome · Dimensione · Modificato
-... selezione multipla ...        │ ... cartelle, poi log ...
-Copia ultimo · Copia selezionati  │ Aggiornamento automatico
-Elimina · Svuota · Espelli         │ Espelli dopo la copia
-Stato dell'operazione e avanzamento comune
+Device · Search · Connect         │ Back · Up · Path · Choose
+Board and storage                 │ Current folder
+Log · Recorded · Size             │ Name · Size · Modified
+... multi-selection ...           │ ... folders, then logs ...
+Copy latest · Copy selected       │ Automatic refresh
+Delete · Empty storage · Eject    │ Eject after copying
+Shared operation status and progress
 ```
 
-Palette: carta #FFFFFF, fondo FC #F1F5FA, testo #172B46, secondario #62738B, blu azione #245AD1, errore #B63D49. Carattere di sistema (Helvetica Neue / Segoe UI); titolo 22, sezioni 17, comandi e testo 13. Allineamento a sinistra; dimensioni dei file a destra. I nomi dei file mantengono maiuscole e minuscole originali.
+Palette: paper `#FFFFFF`, flight-controller background `#F1F5FA`, primary text `#172B46`, secondary text `#62738B`, action blue `#245AD1`, error `#B63D49`. The app uses the system font (Helvetica Neue / Segoe UI): 22 for the title, 17 for pane headings, 13 for controls and text. File sizes are right-aligned and file names keep their original capitalization.
 
-Nel pannello Computer tutte le cartelle visibili precedono sempre i file, anche in ordine decrescente e ordinando per dimensione o data. Tra i file sono mostrati solo i log `.bbl` e `.bfl` (senza distinzione fra maiuscole e minuscole). Il conteggio indica separatamente cartelle e log visibili; gli altri file rimangono accessibili dal Finder/Explorer.
+In the Computer pane, visible folders always precede files, even in descending order and when sorting by size or date. Only `.bbl` and `.bfl` files are visible, without case sensitivity. The count separates visible folders and logs; other file types remain accessible through Finder or Explorer.
 
-La selezione locale usa tutta la riga, con azzurro esplicito anche senza focus. Accanto al conteggio compaiono **Nuova cartella…** ed **Elimina…**. Il primo chiede un nome per una sottocartella; il secondo si abilita con la selezione e apre una conferma per il Cestino. La conferma di cartelle include esplicitamente tutto il contenuto, anche escluso dal filtro. Nessuna eliminazione permanente locale. Il numero di elementi selezionati appare sotto la lista; entrando in una cartella la selezione si azzera.
+The local selection uses the full row with an explicit light-blue highlight even when focus is elsewhere. **New folder…** creates a subfolder; **Delete…** opens a Trash confirmation. Folder confirmations explicitly include all contents, even items hidden by the Blackbox filter. Local permanent deletion is never used.
 
-L'elenco FC compare appena pronti nomi e dimensioni. Le date partono da `…` e si aggiornano in background senza cambiare selezione, ordine o stato della copia. I pulsanti sono già utilizzabili; le operazioni dell'utente hanno precedenza sulle date. Lo stato distingue attesa del disco USB ed elenco dei log; Informazioni espone i tempi dell'ultimo collegamento.
+The flight-controller list appears as soon as names and sizes are ready. Dates begin as `…` and are updated in the background without changing selection, sort order, or copy status. User operations take precedence over date reads. The status distinguishes waiting for USB storage from listing logs, and About shows the latest connection timings.
 
-Una linea di volo blu compatta identifica l'app. Il resto segue il modello familiare dei gestori di file: selezione con clic, Maiusc e Cmd/Ctrl; doppio clic sulle cartelle; percorso modificabile, Indietro e Su. Il drag rende blu solo il pannello Computer quando la destinazione è valida. Il trascinamento è sempre una copia: nessun trasferimento inverso e nessuna cancellazione automatica dalla FC. Nessuna data del filesystem presentata come data certa del volo.
-
-Revisione del brief prima della realizzazione: rimosso il vecchio sidebar, che avrebbe creato tre colonne invece delle due richieste. Due superfici continue, niente schede statistiche o decorazioni ripetitive. La distinzione visiva principale è fra sorgente FC e destinazione Computer. Le funzioni già presenti rimangono raggiungibili anche senza trascinamento. La modalità demo è chiaramente etichettata.
+A compact blue flight line identifies the app. The rest follows familiar file-manager interaction: click, Shift, and Cmd/Ctrl selection; double-click folders; editable path; Back and Up. The Computer pane turns blue only during a valid drag. Dragging always copies: there is no reverse transfer and no automatic deletion from the flight controller. Filesystem dates are never presented as reliable flight dates.

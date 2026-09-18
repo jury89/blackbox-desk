@@ -82,7 +82,7 @@ class MacTests(unittest.TestCase):
 
     def test_eject_still_mounted_rejected(self):
         with mock.patch.object(self.adapter, "info", return_value=self.info), mock.patch.object(platforms, "run", return_value=b""), mock.patch.object(Path, "is_mount", return_value=True):
-            with self.assertRaisesRegex(AppError, "ancora montata"):
+            with self.assertRaisesRegex(AppError, "still mounted"):
                 self.adapter.eject(self.volume)
 
     def test_list_probes_only_external_partitions(self):
