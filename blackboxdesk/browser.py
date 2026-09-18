@@ -353,7 +353,11 @@ class LocalBrowser(QWidget):
 
     def refresh(self):
         if self.path.is_dir():
-            self.filesystem.setRootPath("")
+            # Resetting to an empty root refreshes Qt's cache on macOS. On
+            # Windows it can leave the proxy view rooted at the drive list,
+            # so keep the selected directory as the model root there.
+            if sys.platform != "win32":
+                self.filesystem.setRootPath("")
             root_index = self.model.mapFromSource(self.filesystem.setRootPath(str(self.path)))
             if self.view.model() is not self.model:
                 self.view.setModel(self.model)
