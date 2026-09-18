@@ -374,10 +374,12 @@ class LocalBrowser(QWidget):
         self.update_count()
         self.set_locked(self.locked)
 
-    def directory_loaded(self, path):
-        if Path(path).resolve() == self.path and self.view.model() is self.model:
-            self.view.setRootIndex(self.model.path_index(self.path))
-            self.update_count()
+    def directory_loaded(self, _path):
+        if self.view.model() is self.model:
+            root_index = self.model.path_index(self.path)
+            if root_index.isValid():
+                self.view.setRootIndex(root_index)
+                self.update_count()
 
     def update_count(self, *_):
         if not hasattr(self, "view"):
