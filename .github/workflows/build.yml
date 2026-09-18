@@ -31,6 +31,12 @@ jobs:
       - run: python tools/build.py
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: Add the release tag to the package name
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: Get-ChildItem -Path dist -Filter '*.zip' | Rename-Item -NewName { "$($_.BaseName)-$env:RELEASE_TAG.zip" }
       - uses: actions/upload-artifact@v4
         with:
           name: Blackbox-Desk-${{ matrix.os }}

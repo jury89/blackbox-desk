@@ -96,8 +96,8 @@ The GitHub Actions workflow in `.github/workflows/build.yml` runs tests and buil
 
 Publish a GitHub Release with a version tag such as `v0.3.5`. The **Build desktop apps** workflow checks out that exact tag, runs the full test suite, and builds the application independently on an Intel macOS runner and a Windows runner. Once both builds succeed, it attaches these ZIP files to the same Release:
 
-- `Blackbox-Desk-macOS-x86_64.zip`, containing the `.app` bundle for Intel Macs.
-- `Blackbox-Desk-Windows-x64.zip`, containing the `.exe` and all required files.
+- `Blackbox-Desk-macOS-x86_64-vX.Y.Z.zip`, containing the `.app` bundle for Intel Macs.
+- `Blackbox-Desk-Windows-x64-vX.Y.Z.zip`, containing the `.exe` and all required files.
 
 The workflow can also be started manually from the Actions tab. Leave the release-tag field blank to build and inspect artifacts without publishing them, or provide the tag of an already published Release to rebuild and update its packages. GitHub-hosted runners produce the packages on their destination operating systems; physical flight-controller validation remains separate.
 
