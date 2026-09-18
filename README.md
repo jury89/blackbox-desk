@@ -92,6 +92,15 @@ The build includes Python, Qt, and dependencies. On macOS it creates `dist/Black
 
 The GitHub Actions workflow in `.github/workflows/build.yml` runs tests and builds on macOS and Windows.
 
+## Publishing a GitHub release
+
+Publish a GitHub Release with a version tag such as `v0.3.5`. The **Build desktop apps** workflow checks out that exact tag, runs the full test suite, and builds the application independently on an Intel macOS runner and a Windows runner. Once both builds succeed, it attaches these ZIP files to the same Release:
+
+- `Blackbox-Desk-macOS-x86_64.zip`, containing the `.app` bundle for Intel Macs.
+- `Blackbox-Desk-Windows-x64.zip`, containing the `.exe` and all required files.
+
+The workflow can also be started manually from the Actions tab. Leave the release-tag field blank to build and inspect artifacts without publishing them, or provide the tag of an already published Release to rebuild and update its packages. GitHub-hosted runners produce the packages on their destination operating systems; physical flight-controller validation remains separate.
+
 ## Technical sources
 
 - [Betaflight: USB Mass Storage](https://betaflight.com/docs/wiki/guides/current/Mass-Storage-Device-Support)

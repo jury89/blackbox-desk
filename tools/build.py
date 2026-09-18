@@ -1,4 +1,4 @@
-"""Build locale per il sistema corrente; non effettua pubblicazioni."""
+"""Build a local package for the current platform; never publishes it."""
 
 import os
 from pathlib import Path
@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     if sys.platform not in ("darwin", "win32"):
-        raise SystemExit("Compila su macOS o Windows.")
+        raise SystemExit("Build on macOS or Windows.")
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", QT_QPA_PLATFORM="offscreen")
-    # Il controllo completo precede sempre la build.
+    # Always run the full test suite before building.
     subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT, env=environment, check=True)
     licenses = collect(ROOT)
     assets = ROOT / "build" / "icons"
@@ -40,7 +40,7 @@ def main():
     else:
         icon_path = assets / "BlackboxDesk.ico"
         if not icon.scaled(256, 256).save(str(icon_path), "ICO"):
-            raise SystemExit("Creazione dell'icona Windows non riuscita.")
+            raise SystemExit("Could not create the Windows icon.")
     command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--windowed", "--onedir",
                "--name", "Blackbox Desk", "--icon", str(icon_path), "--paths", str(ROOT),
                "--add-data", str(ROOT / "README.md") + os.pathsep + ".",
@@ -64,8 +64,8 @@ def main():
         subprocess.run(["/usr/bin/ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(artifact), str(archive)], check=True)
     else:
         archive = Path(shutil.make_archive(str(ROOT / "dist" / "Blackbox-Desk-Windows-x64"), "zip", root_dir=ROOT / "dist", base_dir=artifact.name))
-    print(f"Build e avvio verificati: {artifact}")
-    print(f"Pacchetto distribuibile: {archive}")
+    print(f"Build and smoke test passed: {artifact}")
+    print(f"Distribution package: {archive}")
 
 
 if __name__ == "__main__":

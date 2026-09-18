@@ -1,4 +1,4 @@
-"""Include i testi delle licenze ufficiali nel pacchetto; cache locale riutilizzabile."""
+"""Include official license texts in the package and reuse the local cache."""
 
 from pathlib import Path
 import platform
@@ -23,6 +23,6 @@ def collect(root: Path) -> Path:
         with urlopen(url, timeout=30) as response:
             data = response.read()
         if len(data) < 100 or b"<html" in data.lower():
-            raise RuntimeError(f"Licenza non disponibile: {url}")
+            raise RuntimeError(f"License is unavailable: {url}")
         target.write_bytes(data)
     return destination
