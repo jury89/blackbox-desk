@@ -377,6 +377,10 @@ class LocalBrowser(QWidget):
 
     def directory_loaded(self, _path):
         if self.view.model() is self.model:
+            # QFileSystemModel can discover intermediate directories after the
+            # proxy has evaluated its filters. Rebuild that mapping before
+            # locating the selected directory, especially on Windows.
+            self.model.invalidate()
             root_index = self.model.path_index(self.path)
             if root_index.isValid():
                 self.view.setRootIndex(root_index)
