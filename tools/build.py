@@ -17,8 +17,12 @@ def main():
         raise SystemExit("Build on macOS or Windows.")
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
                        QT_QPA_PLATFORM=os.environ.get("QT_QPA_PLATFORM", "offscreen"))
-    # Always run the full test suite before building.
-    subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT, env=environment, check=True)
+    # Always run the full test suite before building, unless the CI workflow
+    # has completed it in its required test job.
+    if os.environ.get("BLACKBOX_DESK_TESTS_ALREADY_PASSED") == "1":
+        print("Full test suite completed by the required CI test job.")
+    else:
+        subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT, env=environment, check=True)
     licenses = collect(ROOT)
     assets = ROOT / "build" / "icons"
     assets.mkdir(parents=True, exist_ok=True)

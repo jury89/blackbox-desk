@@ -95,11 +95,10 @@ class LocalLogFilterModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         index = source.index(row, 0, parent)
-        path = Path(source.filePath(index))
         name = source.fileName(index)
         if sys.platform == "win32" and (name.startswith(".") or source.fileInfo(index).isHidden()):
             return False
-        return source.isDir(index) or path.is_dir() or Path(name).suffix.casefold() in {".bbl", ".bfl"}
+        return source.isDir(index) or Path(name).suffix.casefold() in {".bbl", ".bfl"}
 
     def lessThan(self, left, right):
         source = self.sourceModel()
@@ -354,11 +353,7 @@ class LocalBrowser(QWidget):
 
     def refresh(self):
         if self.path.is_dir():
-            # Resetting to an empty root refreshes Qt's cache on macOS. On
-            # Windows it can leave the proxy view rooted at the drive list,
-            # so keep the selected directory as the model root there.
-            if sys.platform != "win32":
-                self.filesystem.setRootPath("")
+            self.filesystem.setRootPath("")
             root_index = self.model.mapFromSource(self.filesystem.setRootPath(str(self.path)))
             if self.view.model() is not self.model:
                 self.view.setModel(self.model)
@@ -375,16 +370,10 @@ class LocalBrowser(QWidget):
         self.update_count()
         self.set_locked(self.locked)
 
-    def directory_loaded(self, _path):
-        if self.view.model() is self.model:
-            # QFileSystemModel can discover intermediate directories after the
-            # proxy has evaluated its filters. Rebuild that mapping before
-            # locating the selected directory, especially on Windows.
-            self.model.invalidate()
-            root_index = self.model.path_index(self.path)
-            if root_index.isValid():
-                self.view.setRootIndex(root_index)
-                self.update_count()
+    def directory_loaded(self, path):
+        if Path(path).resolve() == self.path and self.view.model() is self.model:
+            self.view.setRootIndex(self.model.path_index(self.path))
+            self.update_count()
 
     def update_count(self, *_):
         if not hasattr(self, "view"):
