@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     if sys.platform not in ("darwin", "win32"):
         raise SystemExit("Build on macOS or Windows.")
-    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", QT_QPA_PLATFORM="offscreen")
+    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
+                       QT_QPA_PLATFORM=os.environ.get("QT_QPA_PLATFORM", "offscreen"))
     # Always run the full test suite before building.
     subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT, env=environment, check=True)
     licenses = collect(ROOT)
