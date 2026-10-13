@@ -14,7 +14,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-15-intel
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15-intel, windows-latest]
+        os: [macos-15-intel, macos-15, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +52,12 @@ jobs:
         env:
           BLACKBOX_DESK_TESTS_ALREADY_PASSED: '1'
           QT_QPA_PLATFORM: offscreen
+      - name: Verify the macOS executable architecture
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          EXPECTED_ARCH: ${{ matrix.os == 'macos-15-intel' && 'x86_64' || 'arm64' }}
+        run: test "$(/usr/bin/lipo -archs 'dist/Blackbox Desk.app/Contents/MacOS/Blackbox Desk')" = "$EXPECTED_ARCH"
       - name: Add the release tag to the package name
         if: github.event_name == 'release' || inputs.release_tag != ''
         shell: pwsh

@@ -72,3 +72,9 @@ Prova reale del 18 settembre 2026 sulla SpeedyBee F7 V3 / Betaflight 26.6.1, vol
 - Nessun log reale copiato, eliminato o modificato durante queste prove. Lo stesso adattatore è usato dall'espulsione manuale, automatica e prima del reset FLASH. Il reset FLASH e Windows restano coperti da test simulati, senza nuova prova hardware.
 
 La memoria può restare visibile in Utility Disco come dispositivo fisico non montato. L'app non impedisce un montaggio manuale e non installa regole persistenti. Il comportamento del nuovo smontaggio su altre FC richiede prove con quelle schede. Il comando e il suo comportamento sono documentati nel manuale macOS locale `man diskutil`, sezioni `unmountDisk` ed `eject`.
+
+## Release per Mac Apple Silicon
+
+Il workflow di release include `macos-15` (Apple Silicon ARM64), oltre a `macos-15-intel` e Windows. L'intera suite deve passare su entrambi i runner Mac prima delle build; ogni eseguibile distribuito deve superare lo smoke test. Per i due pacchetti Mac, `lipo -archs` verifica inoltre che l'eseguibile sia rispettivamente `x86_64` e `arm64` prima del caricamento sulla release.
+
+Il pacchetto Apple Silicon si chiama `Blackbox-Desk-macOS-arm64-vX.Y.Z.zip`. Il workflow può ricostruire il tag di una release già pubblicata usando l'input `release_tag`, senza spostare il tag. Questi controlli automatizzati non costituiscono un collaudo USB con FC reale su Apple Silicon o Windows.

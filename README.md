@@ -7,6 +7,7 @@ The app has two side-by-side panes: the flight controller on the left and a brow
 ## Status
 
 - **Intel Mac:** a standalone `.app` can be built locally and does not require Python or Terminal to run.
+- **Apple Silicon Mac:** a dedicated native ARM64 `.app` is built on an Apple Silicon runner and does not require Rosetta, Python, or Terminal to run. Physical flight-controller validation on Apple Silicon remains separate.
 - **Windows x64:** the same interface and file-management code are supported. The Windows executable must be built and physically tested on Windows.
 - **Flight controllers:** generic Betaflight recognition, with no manufacturer allowlist. Requires MSP 1.44+ (Betaflight 4.3+) and working USB Mass Storage mode.
 - The transfer engine has been tested previously on a SpeedyBee F7 V3 with Betaflight 2026.6.1. Other boards and the current UI still require hardware validation.
@@ -58,7 +59,7 @@ No real erase or deletion is performed by the automated tests.
 
 ## Compatibility and limits
 
-- macOS and Windows only. The current Mac build targets **Intel x86_64, macOS 14+**. Apple Silicon needs a dedicated build or Rosetta.
+- macOS and Windows only. Separate Mac packages target **Intel x86_64** and **Apple Silicon ARM64**, for **macOS 14+**. Download the package matching your Mac's processor.
 - One flight controller at a time. After a restart, the app looks for one new external USB volume and stops if multiple new volumes appear.
 - Selecting an already-mounted disk cannot repeat MSP verification of board and firmware; the UI labels it as storage already connected.
 - Flight controllers without MSC are not supported yet; there is no serial fallback for flash downloads.
@@ -90,13 +91,14 @@ Tests use temporary folders and simulated device responses, so they never delete
 
 The build includes Python, Qt, and dependencies. On macOS it creates `dist/Blackbox Desk.app`; on Windows it creates `dist/Blackbox Desk/Blackbox Desk.exe` and its required dependency folder. Build packages on their destination operating system. Do not copy only the executable out of the Windows folder.
 
-The GitHub Actions workflow in `.github/workflows/build.yml` runs tests and builds on macOS and Windows.
+The GitHub Actions workflow in `.github/workflows/build.yml` runs the full test suite on Intel and Apple Silicon macOS, then builds separate packages for both Mac architectures and Windows.
 
 ## Publishing a GitHub release
 
-Publish a GitHub Release with a version tag such as `v0.3.5`. The **Build desktop apps** workflow checks out that exact tag and completes the full test suite on macOS before starting independent package builds on an Intel macOS runner and a Windows runner. Each package also passes its executable smoke test. Once both builds succeed, it attaches these ZIP files to the same Release:
+Publish a GitHub Release with a version tag such as `v0.3.7`. The **Build desktop apps** workflow checks out that exact tag and completes the full test suite on both Intel and Apple Silicon macOS before starting independent package builds on Intel macOS, Apple Silicon macOS, and Windows runners. Each package also passes its executable smoke test; both Mac executables must match their expected architecture, checked with `lipo`. Once all three builds succeed, it attaches these ZIP files to the same Release:
 
 - `Blackbox-Desk-macOS-x86_64-vX.Y.Z.zip`, containing the `.app` bundle for Intel Macs.
+- `Blackbox-Desk-macOS-arm64-vX.Y.Z.zip`, containing the native `.app` bundle for Apple Silicon Macs (M-series processors).
 - `Blackbox-Desk-Windows-x64-vX.Y.Z.zip`, containing the `.exe` and all required files.
 
 The workflow can also be started manually from the Actions tab. Leave the release-tag field blank to build and inspect artifacts without publishing them, or provide the tag of an already published Release to rebuild and update its packages. GitHub-hosted runners produce the packages on their destination operating systems; physical flight-controller validation remains separate.
